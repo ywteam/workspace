@@ -5,7 +5,7 @@ export WKSPC_CLI_ARGS=("$@") && readonly WKSPC_CLI_ARGS
 
 export YDK_PATH="./sdk/shell/packages/ydk/ydk.cli.sh" && readonly YDK_PATH
 WKSPC_CLI__LOGGER_CONTEXT="WKSPC" && readonly WKSPC_CLI__LOGGER_CONTEXT
-
+set -e -o pipefail
 ydk:workspace:setup(){
     
     [[ -f "${YDK_PATH}" ]] && return 0
@@ -21,12 +21,12 @@ ydk:workspace:setup(){
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
-            # git submodule deinit "${SUBMODULE_PATH}"
-            # git rm -rf --cached "${SUBMODULE_PATH}"
-            # rm -rf .git/modules/"${SUBMODULE_PATH}"
-            # rm -rf "${SUBMODULE_PATH}"
-            # git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
-            # git config --local --remove-section "submodule.${SUBMODULE_PATH}"
+            git submodule deinit "${SUBMODULE_PATH}"
+            git rm -rf --cached "${SUBMODULE_PATH}"
+            rm -rf .git/modules/"${SUBMODULE_PATH}"
+            rm -rf "${SUBMODULE_PATH}"
+            git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
+            git config --local --remove-section "submodule.${SUBMODULE_PATH}"
             continue
             if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then                
                 echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
