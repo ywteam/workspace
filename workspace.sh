@@ -15,26 +15,29 @@ ydk:workspace:setup(){
         exit "${STATUS}"
     }
     __workspace:configure(){
+        # git config --list --show-origin 
+        # git config --global credential.helper cache
+        # git config --global credential.helper 'cache --timeout=3600'
         ! [[ -f ".gitsubmodules" ]] && git submodule init
         git submodule update
         for CONFIG_KEY in "${!YDK_WKSPC_SETUP_CONFIG[@]}"; do
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
-            git submodule deinit "${SUBMODULE_PATH}"
-            git rm -rf --cached "${SUBMODULE_PATH}"
-            rm -rf .git/modules/"${SUBMODULE_PATH}"
-            rm -rf "${SUBMODULE_PATH}"
-            git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
-            git config --local --remove-section "submodule.${SUBMODULE_PATH}"
-            continue
+            # git submodule deinit "${SUBMODULE_PATH}"
+            # git rm -rf --cached "${SUBMODULE_PATH}"
+            # rm -rf .git/modules/"${SUBMODULE_PATH}"
+            # rm -rf "${SUBMODULE_PATH}"
+            # git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
+            # git config --local --remove-section "submodule.${SUBMODULE_PATH}"
+            # continue
             if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then                
                 echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                 git submodule update --remote "${SUBMODULE_PATH}"
                 continue
             fi
             echo "Adding submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
-            git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"            
+            git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"
         done
         # IFS=' ' read -r -a WORKSPACE_PATHS <<<"${YDK_WKSPC_SETUP_CONFIG["paths"]}"
         # for WORKSPACE_PATH in "${WORKSPACE_PATHS[@]}"; do
