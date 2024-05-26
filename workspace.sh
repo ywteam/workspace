@@ -5,7 +5,7 @@ export WKSPC_CLI_ARGS=("$@") && readonly WKSPC_CLI_ARGS
 
 export YDK_PATH="./sdk/shell/packages/ydk/ydk.cli.sh" && readonly YDK_PATH
 WKSPC_CLI__LOGGER_CONTEXT="WKSPC" && readonly WKSPC_CLI__LOGGER_CONTEXT
-
+set -e -o pipefail
 ydk:workspace:setup(){
     
     [[ -f "${YDK_PATH}" ]] && return 0
@@ -15,19 +15,29 @@ ydk:workspace:setup(){
         exit "${STATUS}"
     }
     __workspace:configure(){
+        # git config --list --show-origin 
+        # git config --global credential.helper cache
+        # git config --global credential.helper 'cache --timeout=3600'
         ! [[ -f ".gitsubmodules" ]] && git submodule init
         git submodule update
         for CONFIG_KEY in "${!YDK_WKSPC_SETUP_CONFIG[@]}"; do
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
-            if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then
+            # git submodule deinit "${SUBMODULE_PATH}"
+            # git rm -rf --cached "${SUBMODULE_PATH}"
+            # rm -rf .git/modules/"${SUBMODULE_PATH}"
+            # rm -rf "${SUBMODULE_PATH}"
+            # git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
+            # git config --local --remove-section "submodule.${SUBMODULE_PATH}"
+            # continue
+            if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then                
                 echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                 git submodule update --remote "${SUBMODULE_PATH}"
                 continue
             fi
             echo "Adding submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
-            git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"            
+            git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"
         done
         # IFS=' ' read -r -a WORKSPACE_PATHS <<<"${YDK_WKSPC_SETUP_CONFIG["paths"]}"
         # for WORKSPACE_PATH in "${WORKSPACE_PATHS[@]}"; do
@@ -800,16 +810,17 @@ ydk:workspace(){
         ["repo/url"]="https://github.com/ywteam/workspace"
         ["repo/branch"]="main"
         ["paths"]="env config docs scripts tools packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
-        ["submodule/projects/ydk/shell"]="https://github.com/ywteam/ydk.shell.git"
-        ["submodule/projects/ydk/go"]="https://github.com/ywteam/ydk.go.git"
-        ["submodule/projects/ydk/node"]="https://github.com/ywteam/ydk.node.git"
-        ["submodule/projects/ydk/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
-        ["submodule/projects/ydk/python"]="https://github.com/ywteam/ydk.python.git"
         ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
-        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git
-        ["submodule/public/yellowteam.cloud"]=https://github.com/ywteam/.github.git
-        ["submodule/private/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
         ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
+        ["submodule/packages"]="https://github.com/ywteam/packages.git"
+        ["submodule/pages/yellowteam.cloud"]=https://github.com/ywteam/.github.git
+        ["submodule/pages/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/projects/ydk/src/shell"]="https://github.com/ywteam/ydk.shell.git"
+        ["submodule/projects/ydk/src/go"]="https://github.com/ywteam/ydk.go.git"
+        ["submodule/projects/ydk/src/node"]="https://github.com/ywteam/ydk.node.git"
+        ["submodule/projects/ydk/src/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
+        ["submodule/projects/ydk/src/python"]="https://github.com/ywteam/ydk.python.git"                          
     )
 }
 

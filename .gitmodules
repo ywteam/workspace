@@ -1,30 +1,33 @@
-[submodule "projects/ydk/shell"]
-	path = projects/ydk/shell
-	url = https://github.com/ywteam/ydk.shell.git
-[submodule "projects/ydk/go"]
-	path = projects/ydk/go
-	url = https://github.com/ywteam/ydk.go.git
-[submodule "projects/ydk/node"]
-	path = projects/ydk/node
-	url = https://github.com/ywteam/ydk.node.git
-[submodule "projects/ydk/dotnet"]
-	path = projects/ydk/dotnet
+[submodule "projects/ydk/src/dotnet"]
+	path = projects/ydk/src/dotnet
 	url = https://github.com/ywteam/ydk.dotnet.git
-[submodule "projects/ydk/python"]
-	path = projects/ydk/python
-	url = https://github.com/ywteam/ydk.python.git
-[submodule "infra/iac"]
-	path = infra/iac
-	url = https://github.com/ywteam/infra.iac.git
-[submodule "public/yellowteam.cloud"]
-	path = public/yellowteam.cloud
-	url = https://github.com/ywteam/.github.git
-[submodule "docs/mintlify"]
-	path = docs/mintlify
-	url = https://github.com/ywteam/docs.mintlify.git
-[submodule "private/yellowteam.dev"]
-	path = private/yellowteam.dev
+[submodule "pages/yellowteam.dev"]
+	path = pages/yellowteam.dev
 	url = https://github.com/ywteam/.github-private.git
+[submodule "projects/ydk/src/go"]
+	path = projects/ydk/src/go
+	url = https://github.com/ywteam/ydk.go.git
+[submodule "projects/ydk/src/shell"]
+	path = projects/ydk/src/shell
+	url = https://github.com/ywteam/ydk.shell.git
+[submodule "projects/ydk/src/node"]
+	path = projects/ydk/src/node
+	url = https://github.com/ywteam/ydk.node.git
+[submodule "packages"]
+	path = packages
+	url = https://github.com/ywteam/packages.git
 [submodule "assets/cdn"]
 	path = assets/cdn
 	url = https://github.com/ywteam/assets.cdn.git
+[submodule "infra/iac"]
+	path = infra/iac
+	url = https://github.com/ywteam/infra.iac.git
+[submodule "docs/mintlify"]
+	path = docs/mintlify
+	url = https://github.com/ywteam/docs.mintlify.git
+[submodule "pages/yellowteam.cloud"]
+	path = pages/yellowteam.cloud
+	url = https://github.com/ywteam/.github.git
+[submodule "projects/ydk/src/python"]
+	path = projects/ydk/src/python
+	url = https://github.com/ywteam/ydk.python.git
