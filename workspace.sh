@@ -7,9 +7,7 @@ export YDK_PATH="./sdk/shell/packages/ydk/ydk.cli.sh" && readonly YDK_PATH
 WKSPC_CLI__LOGGER_CONTEXT="WKSPC" && readonly WKSPC_CLI__LOGGER_CONTEXT
 
 ydk:workspace:setup(){
-    declare -A YDK_WKSPC_SETUP_CONFIG=(
-        ["repo/url"]="https://github.com/raphaelcarlosr/workspace"
-    )
+    
     [[ -f "${YDK_PATH}" ]] && return 0
     __workspace:onexit(){
         local STATUS="$?"
@@ -17,12 +15,30 @@ ydk:workspace:setup(){
         exit "${STATUS}"
     }
     __workspace:configure(){
-        echo "Configuring"
+        IFS=' ' read -r -a WORKSPACE_PATHS <<<"${YDK_WKSPC_SETUP_CONFIG["paths"]}"
+        for WORKSPACE_PATH in "${WORKSPACE_PATHS[@]}"; do
+            mkdir -p "${WORKSPACE_PATH}"
+            touch "${WORKSPACE_PATH}/.gitkeep"
+            echo "Created ${WORKSPACE_PATH}"
+        done 
+        git submodule init
+        git submodule update
+        for CONFIG_KEY in "${!YDK_WKSPC_SETUP_CONFIG[@]}"; do
+            ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
+            local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
+            local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
+            echo "Adding submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
+            # git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"
+        done
         return 0
     }
     local RETURN_STATUS=0
     trap '__workspace:onexit' EXIT
-    if declare -f "__workspace:$1" > /dev/null; then
+    [[ -z "${1}" ]] && {
+        echo "Invalid arguments"
+        return 1
+    }
+    if type -t "__workspace:$1" >/dev/null 2>&1; then
         # call arguments verbatim
         __workspace:"$1" "$@"
         return $?
@@ -34,11 +50,6 @@ ydk:workspace:setup(){
     [[ ! -f "${YDK_PATH}" ]] && return 1
     return "${RETURN_STATUS}"
 }
-if ! ydk:workspace:setup "$@"; then
-    echo "Failed to setup workspace"
-    exit 1
-fi
-exit 100
 ydk:workspace(){
     ydk:log info "Yellow Team Workspace CLI"
     ydk:undo add "Workspace rollback" echo "Rollback"
@@ -777,4 +788,19 @@ ydk:workspace(){
     return $? 
 }
 
+{
+
+    declare -A YDK_WKSPC_SETUP_CONFIG=(
+        ["repo/url"]="https://github.com/ywteam/workspace"
+        ["repo/branch"]="main"
+        ["paths"]="env config docs scripts tools packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
+        ["submodule/projects/ydk/shell"]="https://github.com/ywteam/ydk.shell.git"
+    )
+}
+
+if ! ydk:workspace:setup "$@"; then
+    echo "Failed to setup workspace"
+    exit 1
+fi
+exit 100
 source ./sdk/shell/packages/ydk/ydk.cli.sh "$@" 4>&1
