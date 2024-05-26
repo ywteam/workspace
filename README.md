@@ -112,6 +112,11 @@ References:
 
 ## Submodules
 
+### Init
+```shell
+git submodule init
+```
+
 ### Adding a submodule
 ```shell
 git submodule add <repository_url> <folder_path>
