@@ -21,15 +21,14 @@ ydk:workspace:setup(){
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
-            
             if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then
-                # git submodule deinit "${SUBMODULE_PATH}"
-                # git rm --cached "${SUBMODULE_PATH}"
-                # rm -rf .git/modules/"${SUBMODULE_PATH}"
+                git submodule deinit "${SUBMODULE_PATH}"
+                git rm -rf --cached "${SUBMODULE_PATH}"
+                rm -rf .git/modules/"${SUBMODULE_PATH}"
                 rm -rf "${SUBMODULE_PATH}"
                 # echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                 # git submodule update --remote "${SUBMODULE_PATH}"
-                # continue
+                continue
             fi
             # echo "Adding submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
             # git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"            
@@ -805,16 +804,17 @@ ydk:workspace(){
         ["repo/url"]="https://github.com/ywteam/workspace"
         ["repo/branch"]="main"
         ["paths"]="env config docs scripts tools packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
-        ["submodule/projects/ydk/shell"]="https://github.com/ywteam/ydk.shell.git"
-        ["submodule/projects/ydk/go"]="https://github.com/ywteam/ydk.go.git"
-        ["submodule/projects/ydk/node"]="https://github.com/ywteam/ydk.node.git"
-        ["submodule/projects/ydk/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
-        ["submodule/projects/ydk/python"]="https://github.com/ywteam/ydk.python.git"
         ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
-        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git
-        ["submodule/public/yellowteam.cloud"]=https://github.com/ywteam/.github.git
-        ["submodule/private/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
         ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
+        ["submodule/packages"]="https://github.com/ywteam/packages.git"
+        ["submodule/pages/yellowteam.cloud"]=https://github.com/ywteam/.github.git
+        ["submodule/pages/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/projects/ydk/src/shell"]="https://github.com/ywteam/ydk.shell.git"
+        ["submodule/projects/ydk/src/go"]="https://github.com/ywteam/ydk.go.git"
+        ["submodule/projects/ydk/src/node"]="https://github.com/ywteam/ydk.node.git"
+        ["submodule/projects/ydk/src/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
+        ["submodule/projects/ydk/src/python"]="https://github.com/ywteam/ydk.python.git"                          
     )
 }
 
