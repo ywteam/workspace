@@ -15,21 +15,27 @@ ydk:workspace:setup(){
         exit "${STATUS}"
     }
     __workspace:configure(){
-        IFS=' ' read -r -a WORKSPACE_PATHS <<<"${YDK_WKSPC_SETUP_CONFIG["paths"]}"
-        for WORKSPACE_PATH in "${WORKSPACE_PATHS[@]}"; do
-            mkdir -p "${WORKSPACE_PATH}"
-            touch "${WORKSPACE_PATH}/.gitkeep"
-            echo "Created ${WORKSPACE_PATH}"
-        done 
-        git submodule init
+        ! [[ -f ".gitsubmodules" ]] && git submodule init
         git submodule update
         for CONFIG_KEY in "${!YDK_WKSPC_SETUP_CONFIG[@]}"; do
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
+            if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then
+                echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
+                git submodule update --remote "${SUBMODULE_PATH}"
+                continue
+            fi
             echo "Adding submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
-            # git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"
+            git submodule add "${SUBMODULE_REPO}" "${SUBMODULE_PATH}"            
         done
+        # IFS=' ' read -r -a WORKSPACE_PATHS <<<"${YDK_WKSPC_SETUP_CONFIG["paths"]}"
+        # for WORKSPACE_PATH in "${WORKSPACE_PATHS[@]}"; do
+        #     [[ -d "${WORKSPACE_PATH}" ]] && continue
+        #     mkdir -p "${WORKSPACE_PATH}"
+        #     touch "${WORKSPACE_PATH}/.gitkeep"
+        #     echo "Created ${WORKSPACE_PATH}"
+        # done 
         return 0
     }
     local RETURN_STATUS=0
@@ -795,6 +801,15 @@ ydk:workspace(){
         ["repo/branch"]="main"
         ["paths"]="env config docs scripts tools packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
         ["submodule/projects/ydk/shell"]="https://github.com/ywteam/ydk.shell.git"
+        ["submodule/projects/ydk/go"]="https://github.com/ywteam/ydk.go.git"
+        ["submodule/projects/ydk/node"]="https://github.com/ywteam/ydk.node.git"
+        ["submodule/projects/ydk/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
+        ["submodule/projects/ydk/python"]="https://github.com/ywteam/ydk.python.git"
+        ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
+        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git
+        ["submodule/public/yellowteam.cloud"]=https://github.com/ywteam/.github.git
+        ["submodule/private/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
     )
 }
 
