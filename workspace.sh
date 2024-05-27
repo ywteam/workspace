@@ -24,13 +24,13 @@ ydk:workspace:setup(){
             ! [[ "${CONFIG_KEY}" =~ ^submodule/([a-zA-Z0-9_]+)* ]] && continue
             local SUBMODULE_PATH="${CONFIG_KEY//submodule\//}"
             local SUBMODULE_REPO="${YDK_WKSPC_SETUP_CONFIG["${CONFIG_KEY}"]}"
-            git submodule deinit "${SUBMODULE_PATH}"
-            git rm -rf --cached "${SUBMODULE_PATH}"
-            rm -rf .git/modules/"${SUBMODULE_PATH}"
-            rm -rf "${SUBMODULE_PATH}"
-            git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
-            git config --local --remove-section "submodule.${SUBMODULE_PATH}"
-            continue
+            # git submodule deinit "${SUBMODULE_PATH}"
+            # git rm -rf --cached "${SUBMODULE_PATH}"
+            # rm -rf .git/modules/"${SUBMODULE_PATH}"
+            # rm -rf "${SUBMODULE_PATH}"
+            # git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
+            # git config --local --remove-section "submodule.${SUBMODULE_PATH}"
+            # continue
             if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then                
                 echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                 git submodule update --remote "${SUBMODULE_PATH}"
@@ -809,11 +809,11 @@ ydk:workspace(){
     declare -A YDK_WKSPC_SETUP_CONFIG=(
         ["repo/url"]="https://github.com/ywteam/workspace"
         ["repo/branch"]="main"
-        ["paths"]="env config docs scripts tools packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
+        ["paths"]="config dist docs scripts tools registry/packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
         # ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
         # ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
         # ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
-        ["submodule/packages"]="https://github.com/ywteam/packages.git"
+        ["submodule/registry/packages"]="https://github.com/ywteam/packages.git"
         # ["submodule/pages/yellowteam.cloud"]=https://github.com/ywteam/.github.git
         # ["submodule/pages/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
         # ["submodule/projects/ydk/src/shell"]="https://github.com/ywteam/ydk.shell.git"
