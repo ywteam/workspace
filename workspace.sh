@@ -30,7 +30,7 @@ ydk:workspace:setup(){
                 local SUBMODULE_REPO_URL="${YDK_WKSPC_SETUP_CONFIG["repo.organization.url"]}/${SUBMODULE_REPO}"                
                 [[ -z "${SUBMODULE_PATH}" ]] && continue
                 echo "Processing submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO_URL}"
-                if [[ true == false ]]; then
+                if [[ true == true ]]; then
                     echo "Removing submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                     git submodule deinit "${SUBMODULE_PATH}"
                     git rm -rf --cached "${SUBMODULE_PATH}"
@@ -61,11 +61,11 @@ ydk:workspace:setup(){
                 MKDIR_ARGS+=("${CONFIG_PATH}")
             fi            
         done
-        for MKDIR_ARG in "${MKDIR_ARGS[@]}"; do
-            mkdir -p "${MKDIR_ARG}"
-            touch "${MKDIR_ARG}/.gitkeep"
-            echo "Created ${MKDIR_ARG}"
-        done        
+        # for MKDIR_ARG in "${MKDIR_ARGS[@]}"; do
+        #     mkdir -p "${MKDIR_ARG}"
+        #     touch "${MKDIR_ARG}/.gitkeep"
+        #     echo "Created ${MKDIR_ARG}"
+        # done        
         return 0
     }
     local RETURN_STATUS=0
