@@ -1,0 +1,3 @@
+[submodule "public/pages/profile"]
+	path = public/pages/profile
+	url = https://github.com/ywteam/.github
