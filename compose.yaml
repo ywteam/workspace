@@ -1,0 +1,12 @@
+name: ywteam
+
+networks:
+  ywteam:
+    name: ywteam
+    driver: bridge
+  ywteam-edge:
+    name: ywteam-edge
+    driver: overlay 
+  ywteam-host:
+    name: ywteam-host
+    driver: host  

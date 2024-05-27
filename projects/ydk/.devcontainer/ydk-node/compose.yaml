@@ -1,0 +1,18 @@
+name: ywteam-ydk
+services:
+  ywt-ydk-node:
+    container_name: ywt-ydk-node
+    image: mcr.microsoft.com/devcontainers/typescript-node:dev-18-bookworm
+    command: sleep infinity
+    networks:
+      - ydk    
+    environment:
+      - NODE_ENV=development
+      - HOST_USER_ID=${UID:-1000}
+      - HOST_GROUP_ID=${GID:-1000}
+    volumes:
+      - ../../../..:/workspace:cached
+      # - ../../src/shell:/workspace/src:cached
+      # - ../../../../.git:/workspace/.git:cached
+      # - ../../../../.gitignore:/workspace/.gitignore:cached
+      # - ../../../../.gitmodules:/workspace/.gitmodules:cached
