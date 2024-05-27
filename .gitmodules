@@ -13,9 +13,6 @@
 [submodule "projects/ydk/src/node"]
 	path = projects/ydk/src/node
 	url = https://github.com/ywteam/ydk.node.git
-[submodule "packages"]
-	path = packages
-	url = https://github.com/ywteam/packages.git
 [submodule "assets/cdn"]
 	path = assets/cdn
 	url = https://github.com/ywteam/assets.cdn.git
