@@ -29,7 +29,7 @@ ydk:workspace:setup(){
             rm -rf .git/modules/"${SUBMODULE_PATH}"
             rm -rf "${SUBMODULE_PATH}"
             git config -f .gitmodules --remove-section "submodule.${SUBMODULE_PATH}"
-            git config --local --remove-section "submodule.${SUBMODULE_PATH}"
+            git config --local --remove-section "submodule.${SUBMODULE_PATH}" 2>/dev/null
             continue
             if [[ -d "${SUBMODULE_PATH}" ]] && [[ -d ".git/modules/${SUBMODULE_PATH}" ]]; then                
                 echo "Updating submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
@@ -810,17 +810,17 @@ ydk:workspace(){
         ["repo/url"]="https://github.com/ywteam/workspace"
         ["repo/branch"]="main"
         ["paths"]="config dist docs scripts tools registry/packages docker infra server api assets assets/cdn assets/public assets/private assets/images pages public private .github apps cli projects"
-        # ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
-        # ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
-        # ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
-        ["submodule/registry/packages"]="https://github.com/ywteam/packages.git"
-        # ["submodule/pages/yellowteam.cloud"]=https://github.com/ywteam/.github.git
-        # ["submodule/pages/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
-        # ["submodule/projects/ydk/src/shell"]="https://github.com/ywteam/ydk.shell.git"
-        # ["submodule/projects/ydk/src/go"]="https://github.com/ywteam/ydk.go.git"
-        # ["submodule/projects/ydk/src/node"]="https://github.com/ywteam/ydk.node.git"
-        # ["submodule/projects/ydk/src/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
-        # ["submodule/projects/ydk/src/python"]="https://github.com/ywteam/ydk.python.git"                          
+        ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
+        ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
+        ["submodule/infra/iac"]=https://github.com/ywteam/infra.iac.git
+        # ["submodule/registry/packages"]="https://github.com/ywteam/packages.git"
+        ["submodule/pages/yellowteam.cloud"]=https://github.com/ywteam/.github.git
+        ["submodule/pages/yellowteam.dev"]=https://github.com/ywteam/.github-private.git
+        ["submodule/projects/ydk/src/shell"]="https://github.com/ywteam/ydk.shell.git"
+        ["submodule/projects/ydk/src/go"]="https://github.com/ywteam/ydk.go.git"
+        ["submodule/projects/ydk/src/node"]="https://github.com/ywteam/ydk.node.git"
+        ["submodule/projects/ydk/src/dotnet"]="https://github.com/ywteam/ydk.dotnet.git"
+        ["submodule/projects/ydk/src/python"]="https://github.com/ywteam/ydk.python.git"                          
     )
 }
 
