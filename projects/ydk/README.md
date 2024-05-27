@@ -1,1 +1,0 @@
-# Yellow Software Development Kit (YDK)
