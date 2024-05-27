@@ -28,3 +28,6 @@
 [submodule "projects/ydk/src/python"]
 	path = projects/ydk/src/python
 	url = https://github.com/ywteam/ydk.python.git
+[submodule "registry/packages"]
+	path = registry/packages
+	url = https://github.com/ywteam/packages.git
