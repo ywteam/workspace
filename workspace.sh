@@ -30,7 +30,7 @@ ydk:workspace:setup(){
                 local SUBMODULE_REPO_URL="${YDK_WKSPC_SETUP_CONFIG["repo.organization.url"]}/${SUBMODULE_REPO}"                
                 [[ -z "${SUBMODULE_PATH}" ]] && continue
                 echo "Processing submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO_URL}"
-                if [[ true == true ]]; then
+                if [[ true == false ]]; then
                     echo "Removing submodule ${SUBMODULE_PATH} ${SUBMODULE_REPO}"
                     git submodule deinit "${SUBMODULE_PATH}"
                     git rm -rf --cached "${SUBMODULE_PATH}"
@@ -870,11 +870,11 @@ ydk:workspace(){
     YDK_WKSPC_SETUP_CONFIG["submodule.docs.mintlify"]="${YDK_WKSPC_SETUP_CONFIG["path.docs"]}/mintlify"
     YDK_WKSPC_SETUP_CONFIG["submodule.infra.iac"]="${YDK_WKSPC_SETUP_CONFIG["path.infra.iac"]}"
     YDK_WKSPC_SETUP_CONFIG["submodule.packages"]="${YDK_WKSPC_SETUP_CONFIG["path.public.packages"]}"
-    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.dotnet"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/dotnet"
-    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.go"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/go"
-    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.node"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/node"
-    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.python"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/python"
-    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.shell"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/shell"
+    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.dotnet"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/src/dotnet"
+    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.go"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/src/go"
+    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.node"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/src/node"
+    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.python"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/src/python"
+    YDK_WKSPC_SETUP_CONFIG["submodule.ydk.shell"]="${YDK_WKSPC_SETUP_CONFIG["path.projects.ydk"]}/src/shell"
     
     #     # ["submodule/assets/cdn"]=https://github.com/ywteam/assets.cdn.git
     #     # ["submodule/docs/mintlify"]=https://github.com/ywteam/docs.mintlify.git      
