@@ -1,0 +1,33 @@
+[submodule "public/assets"]
+	path = public/assets
+	url = https://github.com/ywteam/assets
+[submodule "public/pages/profile"]
+	path = public/pages/profile
+	url = https://github.com/ywteam/.github
+[submodule "projects/ydk/src/node"]
+	path = projects/ydk/src/node
+	url = https://github.com/ywteam/ydk.node
+[submodule "projects/ydk/src/dotnet"]
+	path = projects/ydk/src/dotnet
+	url = https://github.com/ywteam/ydk.dotnet
+[submodule "private/pages/profile"]
+	path = private/pages/profile
+	url = https://github.com/ywteam/.github-private
+[submodule "public/packages"]
+	path = public/packages
+	url = https://github.com/ywteam/packages
+[submodule "projects/ydk/src/shell"]
+	path = projects/ydk/src/shell
+	url = https://github.com/ywteam/ydk.shell
+[submodule "projects/ydk/src/go"]
+	path = projects/ydk/src/go
+	url = https://github.com/ywteam/ydk.go
+[submodule "projects/ydk/src/python"]
+	path = projects/ydk/src/python
+	url = https://github.com/ywteam/ydk.python
+[submodule "docs/mintlify"]
+	path = docs/mintlify
+	url = https://github.com/ywteam/docs.mintlify
+[submodule "infra/iac"]
+	path = infra/iac
+	url = https://github.com/ywteam/infra.iac
