@@ -1,0 +1,6 @@
+name: ywteam-dev
+
+networks:
+  ywteam:
+    name: ywteam-dev
+    driver: bridge  

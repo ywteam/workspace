@@ -16,7 +16,7 @@ ydk:workspace:setup(){
 
     # target='<hostfolder>' && p=$(printf "%s" "$target" | xxd -p) && code --folder-uri "ssh-remote+158.220.123.192 vscode-remote://dev-container+${p//[[:space:]]/}workspace/projects/ydk/.devcontainer" 
     # target='<hostfolder>' && p=$(printf "%s" "$target" | xxd -p) && code --folder-uri "vscode-remote://dev-container+${p//[[:space:]]/}workspace/projects/ydk/.devcontainer"
-
+    docker exec -it -w /workspace/projects/ydk/src/shell ywt-ydk-shell ./packages/ydk/ydk.cli.sh log success "From workspace"
     return 1
     __workspace:configure(){
         # git config --list --show-origin 

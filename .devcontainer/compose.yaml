@@ -1,0 +1,5 @@
+
+networks:
+  ywteam:
+    name: ywteam-ydk
+    driver: bridge 
