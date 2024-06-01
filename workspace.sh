@@ -3,7 +3,7 @@ WKSPC_CLI_ENTRYPOINT="${0}" && readonly WKSPC_CLI_ENTRYPOINT
 WKSPC_CLI_ENTRYPOINT_DIR=$(dirname "${WKSPC_CLI_ENTRYPOINT}") && WKSPC_CLI_ENTRYPOINT_DIR=$(realpath "${WKSPC_CLI_ENTRYPOINT_DIR}") && readonly WKSPC_CLI_ENTRYPOINT_DIR
 export WKSPC_CLI_ARGS=("$@") && readonly WKSPC_CLI_ARGS
 
-export YDK_PATH="./sdk/shell/packages/ydk/ydk.cli.sh" && readonly YDK_PATH
+export YDK_PATH="./sdk/shell/packages/ydk/ydk.sh" && readonly YDK_PATH
 WKSPC_CLI__LOGGER_CONTEXT="WKSPC" && readonly WKSPC_CLI__LOGGER_CONTEXT
 set -e -o pipefail
 ydk:workspace:setup(){    
@@ -17,6 +17,7 @@ ydk:workspace:setup(){
     # target='<hostfolder>' && p=$(printf "%s" "$target" | xxd -p) && code --folder-uri "ssh-remote+158.220.123.192 vscode-remote://dev-container+${p//[[:space:]]/}workspace/projects/ydk/.devcontainer" 
     # target='<hostfolder>' && p=$(printf "%s" "$target" | xxd -p) && code --folder-uri "vscode-remote://dev-container+${p//[[:space:]]/}workspace/projects/ydk/.devcontainer"
     docker exec -it -w /workspace/projects/ydk/src/shell ywt-ydk-shell ./packages/ydk/ydk.cli.sh log success "From workspace"
+    # docker exec -it -w /workspace/projects/ydk/src/shell ywt-ydk-shell ./packages/ydk/ydk.cli.sh packer bundle
     return 1
     __workspace:configure(){
         # git config --list --show-origin 
