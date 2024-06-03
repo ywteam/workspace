@@ -1,3 +1,7 @@
+# include:
+#   - ../compose.yaml
+#   - ../../compose.yaml
+#   - ../../compose.devcontainer.yaml
 services:
   ywt-ydk-go:
     container_name: ywt-ydk-go
@@ -11,4 +15,4 @@ services:
       - HOST_USER_ID=${UID:-1000}
       - HOST_GROUP_ID=${GID:-1000}
     volumes:
-      - ..:/workspace:cached
+      - ../..:/workspace:cached

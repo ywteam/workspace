@@ -16,7 +16,7 @@ services:
       - HOST_USER_ID=${UID:-1000}
       - HOST_GROUP_ID=${GID:-1000}
     volumes:
-      - ..:/workspace:cached
+      - ../..:/workspace:cached
       # - ../../src/shell:/workspace/src:cached
       # - ../../../../.git:/workspace/.git:cached
       # - ../../../../.gitignore:/workspace/.gitignore:cached

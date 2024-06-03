@@ -14,22 +14,15 @@
     // "workspaceMount": "source=../../..,target=/workspace",
 	// "postStartCommand": "chmod -x ./*.sh; ./handler.sh \"$PWD\"",
 	// "updateContentCommand": "chmod -x ./\"${PWD}\"*.sh; \"${PWD}\"/handler.sh",
-	"features": {
-		"ghcr.io/devcontainers/features/node:1": {},
-		"ghcr.io/lukewiwa/features/shellcheck:0": {},
-		"ghcr.io/edouard-lopez/devcontainer-features/bats:0": {},
+	"features": {		
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"timonwong.shellcheck",
-				"jetmartin.bats",
-				"foxundermoon.shell-format",
-				"bmalehorn.shell-syntax",
-				"rogalmic.bash-debug",
-				"humao.rest-client",
-				"github.vscode-github-actions"
+				"golang.go",
+                "golang.go-nightly",
+                "premparihar.gotestexplorer"
 			]
 		}        
 	}
