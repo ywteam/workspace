@@ -902,3 +902,7 @@ if ! ydk:workspace:setup "$@"; then
 fi
 exit 100
 source ./sdk/shell/packages/ydk/ydk.cli.sh "$@" 4>&1
+
+
+# Find content in files, excluding some directories
+# find /develop -type d \( -path '*node_modules*' -o -path '*.git*' -o -path '*.data*' -o -path '*.angular*' -o -path '*cache*' -o -path '*.pnpm-store*' \) -prune -o -type f -exec grep -i -l "supabase" {} \;
