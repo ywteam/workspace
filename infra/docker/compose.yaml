@@ -1,8 +1,0 @@
-
-networks:
-  yellow:
-    name: yellow
-    driver: overlay
-  yellow-edge:
-    name: yellow-edge
-    driver: overlay
