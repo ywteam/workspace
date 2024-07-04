@@ -1,0 +1,28 @@
+include:
+   - path: ../../docker/compose.yaml
+     project_directory: ../..
+
+x-backstage-edge: &x-backstage-edge
+  <<: *x-backstage-svc
+  networks:
+    - yellow-edge
+  deploy:
+    labels:
+      ydk.service.layer: 'edge'
+  labels:
+    ydk.service.layer: 'edge'
+
+
+services:
+  cloudflared:
+    extends:
+      file: ../../docker/services/cloudflared/compose.yaml
+      service: cloudflared
+    <<: *x-backstage-edge
+    deploy:
+      labels:
+        ydk.service.type: 'tunnel'
+        ydk.service.provider: 'cloudflare'
+    labels:
+      ydk.service.type: 'tunnel'
+      ydk.service.provider: 'cloudflare'

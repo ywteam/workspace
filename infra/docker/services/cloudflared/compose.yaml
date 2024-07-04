@@ -1,0 +1,28 @@
+services:
+  cloudflared: &ydk-cloudflared
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token "${CF_TUNNEL_TOKEN}"
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    # secrets:
+    #   - cf-tunnel-token
+    networks:
+      - yellow
+      - yellow-edge
+    deploy:
+        mode: replicated
+        replicas: 1
+        labels:
+          ydk.profile: 'ywt'
+          ydk.stack.name: 'backstage'
+          ydk.service.layer: 'edge'
+          ydk.service.type: 'tunnel'
+          ydk.service.provider: 'cloudflare'
+        restart_policy:
+          condition: on-failure
+        placement:
+          constraints:
+            - node.role == manager
+# secrets:
+#   cf-tunnel-token:
+#     external: true

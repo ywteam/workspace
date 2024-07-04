@@ -1,0 +1,115 @@
+services:
+  swarmpit-app: &ydk-swarmpit-app
+    image: swarmpit/swarmpit:latest
+    environment:
+      - SWARMPIT_DB=http://swarmpit-db:5984
+      - SWARMPIT_INFLUXDB=http://swarmpit-influxdb:8086
+      - SWARMPIT_DOCKER_API=1.45
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - yellow
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    deploy:
+      labels:
+        ydk.profile: 'ywt'
+        ydk.stack.name: 'backstage'
+        ydk.service.layer: 'internal'
+        ydk.service.type: 'web'
+        ydk.service.provider: 'swarmpit'
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+      placement:
+        constraints:
+          - node.role == manager
+  
+  swarmpit-db: &ydk-swarmpit-db
+    image: couchdb:2.3.0
+    volumes:
+      - swarmpit-db-data:/opt/couchdb/data
+    networks:
+      - yellow
+    deploy:
+      labels:
+        ydk.profile: 'ywt'
+        ydk.stack.name: 'backstage'
+        ydk.service.layer: 'internal'
+        ydk.service.type: 'database'
+        ydk.service.provider: 'swarmpit'
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 256M
+        reservations:
+          cpus: '0.15'
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == manager
+  
+  swarmpit-influxdb: &ydk-swarmpit-influxdb
+    image: influxdb:1.8
+    volumes:
+      - swarmpit-influx-data:/var/lib/influxdb
+    networks:
+      - yellow
+    deploy:
+      labels:
+        ydk.profile: 'ywt'
+        ydk.stack.name: 'backstage'
+        ydk.service.layer: 'internal'
+        ydk.service.type: 'database'
+        ydk.service.provider: 'swarmpit'
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: 512M
+        reservations:
+          cpus: '0.30'
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == manager
+
+  swarmpit-agent: &ydk-swarmpit-agent
+    image: swarmpit/agent:latest
+    environment:
+      - SWARMPIT_DOCKER_API=1.45
+      - EVENT_ENDPOINT=http://swarmpit-app:8080/events
+      - HEALTH_CHECK_ENDPOINT=http://swarmpit-app:8080/version
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - yellow
+    deploy:
+      mode: global
+      labels:
+        swarmpit.agent: 'true'
+        ydk.profile: 'ywt'
+        ydk.stack.name: 'backstage'
+        ydk.service.layer: 'internal'
+        ydk.service.type: 'agent'
+        ydk.service.provider: 'swarmpit'
+      resources:
+        limits:
+          cpus: '0.10'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+
+
+volumes:
+  swarmpit-db-data:
+    driver: local
+  swarmpit-influx-data:
+    driver: local

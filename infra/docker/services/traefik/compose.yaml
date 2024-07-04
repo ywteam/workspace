@@ -1,0 +1,58 @@
+services:
+  traeffik: &ydk-traeffik
+    image: traefik:v3.0
+    command:
+      - "--api=true"
+      - "--api.insecure=true"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      # - "--providers.swarm.useBindPortIP=true"
+      - "--providers.swarm.exposedByDefault=false"
+      - "--providers.swarm.network=yellow-edge"
+      # - "--providers.swarm.defaultRule=Host(`{{ .Name }}.{{ index .Labels \"customLabel\"}}`)"
+      - "--providers.swarm.allowEmptyServices=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.mytlschallenge.acme.email=raphael.crego@owasp.org"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+    networks:
+      - yellow
+      - yellow-edge
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik-data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    deploy:
+      labels:
+        ydk.profile: 'ywt'
+        ydk.stack.name: 'backstage'
+        ydk.service.layer: 'edge'
+        ydk.service.type: 'web'
+        ydk.service.provider: 'traefik'
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+volumes:
+  traefik-data:
+    driver: local
+    # driver_opts:
+    #   type: none
+    #   device: /mnt/data/traefik
+    #   o: bind
