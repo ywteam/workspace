@@ -1,0 +1,249 @@
+version: '3.8'
+services:
+  novu-embed:
+    depends_on:
+      - novu-widget
+    image: 'ghcr.io/novuhq/novu/embed:0.17.1'
+    restart: unless-stopped
+    # ports:
+    #   - 4701:4701
+    networks:
+      - novu    
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      WIDGET_URL: ${NOVU_WIDGET_URL?NOVU_WIDGET_URL not set}
+  novu-widget:
+    image: 'ghcr.io/novuhq/novu/widget:0.17.1'
+    depends_on:
+      - novu-api
+      - novu-worker
+      - novu-web
+    container_name: widget
+    restart: unless-stopped
+    # ports:
+    #   - 4500:4500
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      REACT_APP_API_URL: ${NOVU_API_ROOT_URL?NOVU_API_ROOT_URL not set}
+      REACT_APP_WS_URL: ${NOVU_REACT_APP_WS_URL?NOVU_REACT_APP_WS_URL not set}
+      REACT_APP_ENVIRONMENT: ${NOVU_NODE_ENV?NOVU_NODE_ENV not set}
+      WIDGET_CONTEXT_PATH: ${NOVU_WIDGET_CONTEXT_PATH?NOVU_WIDGET_CONTEXT_PATH not set}
+    networks:
+      - novu
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure  
+  novu-web:
+    image: 'ghcr.io/novuhq/novu/web:0.17.1'
+    depends_on:
+      - novu-api
+      - novu-worker
+    restart: unless-stopped
+    # ports:
+    #   - 4200:4200
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      REACT_APP_API_URL: ${NOVU_API_ROOT_URL?NOVU_API_ROOT_URL not set}
+      REACT_APP_ENVIRONMENT: ${NOVU_NODE_ENV?NOVU_NODE_ENV not set}
+      REACT_APP_WIDGET_EMBED_PATH: ${NOVU_WIDGET_EMBED_PATH?NOVU_WIDGET_EMBED_PATH not set}
+      REACT_APP_DOCKER_HOSTED_ENV: 'true'
+      REACT_APP_WS_URL: ${NOVU_REACT_APP_WS_URL?NOVU_REACT_APP_WS_URL not set}
+    networks:
+      - novu
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure  
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.novu.entrypoints=https"
+        - "traefik.http.routers.novu.rule=Host(`${NOVU_PROXY_HOST?NOVU_PROXY_HOST not set}`)"
+        - "traefik.http.routers.novu.service=novu"
+        - "traefik.http.services.novu.loadbalancer.server.port=4200"
+  novu-ws:
+    image: 'ghcr.io/novuhq/novu/ws:0.17.1'
+    depends_on:
+      - novu-mongodb
+      - novu-redis
+    restart: unless-stopped
+    # ports:
+    #   - '3002:3002'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      PORT: ${NOVU_WS_PORT?NOVU_WS_PORT not set}
+      NODE_ENV: ${NOVU_NODE_ENV?NOVU_NODE_ENV not set}
+      MONGO_URL: ${NOVU_MONGO_URL?NOVU_MONGO_URL not set}
+      MONGO_MAX_POOL_SIZE: ${NOVU_MONGO_MAX_POOL_SIZE?NOVU_MONGO_MAX_POOL_SIZE not set}
+      REDIS_HOST: ${NOVU_REDIS_HOST?NOVU_REDIS_HOST not set}
+      REDIS_PORT: ${NOVU_REDIS_PORT?NOVU_REDIS_PORT not set}
+      REDIS_PASSWORD: ${NOVU_REDIS_PASSWORD?NOVU_REDIS_PASSWORD not set}
+      JWT_SECRET: ${NOVU_JWT_SECRET?NOVU_JWT_SECRET not set}
+      WS_CONTEXT_PATH: ${NOVU_WS_CONTEXT_PATH?NOVU_WS_CONTEXT_PATH not set}
+    networks:
+      - novu
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure  
+  novu-worker:
+    image: 'ghcr.io/novuhq/novu/worker:0.17.1'
+    depends_on:
+      - novu-mongodb
+      - novu-redis
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY?NOVU_STORE_ENCRYPTION_KEY not set}
+      NODE_ENV: ${NOVU_NODE_ENV?NOVU_NODE_ENV not set}
+      MONGO_URL: ${NOVU_MONGO_URL?NOVU_MONGO_URL not set}
+      MONGO_MAX_POOL_SIZE: ${NOVU_MONGO_MAX_POOL_SIZE?NOVU_MONGO_MAX_POOL_SIZE not set}
+      REDIS_HOST: ${NOVU_REDIS_HOST?NOVU_REDIS_HOST not set}
+      REDIS_PORT: ${NOVU_REDIS_PORT?NOVU_REDIS_PORT not set}
+      REDIS_PASSWORD: ${NOVU_REDIS_PASSWORD?NOVU_REDIS_PASSWORD not set}
+      REDIS_DB_INDEX: 2
+      REDIS_CACHE_SERVICE_HOST: ${NOVU_REDIS_CACHE_SERVICE_HOST?NOVU_REDIS_CACHE_SERVICE_HOST not set}
+      REDIS_CACHE_SERVICE_PORT: ${NOVU_REDIS_CACHE_SERVICE_PORT?NOVU_REDIS_CACHE_SERVICE_PORT not set}
+      S3_LOCAL_STACK: ${NOVU_S3_LOCAL_STACK?NOVU_S3_LOCAL_STACK not set}
+      S3_BUCKET_NAME: ${NOVU_S3_BUCKET_NAME?NOVU_S3_BUCKET_NAME not set}
+      S3_REGION: ${NOVU_S3_REGION?NOVU_S3_REGION not set}
+      AWS_ACCESS_KEY_ID: ${NOVU_AWS_ACCESS_KEY_ID?NOVU_AWS_ACCESS_KEY_ID not set}
+      AWS_SECRET_ACCESS_KEY: ${NOVU_AWS_SECRET_ACCESS_KEY?NOVU_AWS_SECRET_ACCESS_KEY not set}      
+      SENTRY_DSN: ${NOVU_SENTRY_DSN?NOVU_SENTRY_DSN not set}
+      # NEW_RELIC_APP_NAME: ${NOVU_NEW_RELIC_APP_NAME?NOVU_NEW_RELIC_APP_NAME not set}
+      # NEW_RELIC_LICENSE_KEY: ${NOVU_NEW_RELIC_LICENSE_KEY?NOVU_NEW_RELIC_LICENSE_KEY not set}
+    networks:
+      - novu
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure  
+  novu-api:
+    image: 'ghcr.io/novuhq/novu/api:0.17.1'
+    depends_on:
+      - novu-mongodb
+      - novu-redis
+    restart: unless-stopped
+    # ports:
+    #   - '3000:3000'
+    environment:
+      API_ROOT_URL: ${NOVU_API_ROOT_URL?NOVU_API_ROOT_URL not set}
+      DISABLE_USER_REGISTRATION: ${NOVU_DISABLE_USER_REGISTRATION?NOVU_DISABLE_USER_REGISTRATION not set}
+      PORT: ${NOVU_API_PORT?NOVU_API_PORT not set}
+      FRONT_BASE_URL: ${NOVU_FRONT_BASE_URL?NOVU_FRONT_BASE_URL not set}
+      API_CONTEXT_PATH: ${NOVU_API_CONTEXT_PATH?NOVU_API_CONTEXT_PATH not set}
+      JWT_SECRET: ${NOVU_JWT_SECRET?NOVU_JWT_SECRET not set}
+      STORE_ENCRYPTION_KEY: ${NOVU_STORE_ENCRYPTION_KEY?NOVU_STORE_ENCRYPTION_KEY not set}
+      NODE_ENV: ${NOVU_NODE_ENV?NOVU_NODE_ENV not set}
+      MONGO_URL: ${NOVU_MONGO_URL?NOVU_MONGO_URL not set}
+      MONGO_MAX_POOL_SIZE: ${NOVU_MONGO_MAX_POOL_SIZE?NOVU_MONGO_MAX_POOL_SIZE not set}
+      REDIS_HOST: ${NOVU_REDIS_HOST?NOVU_REDIS_HOST not set}
+      REDIS_PORT: ${NOVU_REDIS_PORT?NOVU_REDIS_PORT not set}
+      REDIS_PASSWORD: ${NOVU_REDIS_PASSWORD?NOVU_REDIS_PASSWORD not set}
+      REDIS_DB_INDEX: 2
+      REDIS_CACHE_SERVICE_HOST: ${NOVU_REDIS_CACHE_SERVICE_HOST?NOVU_REDIS_CACHE_SERVICE_HOST not set}
+      REDIS_CACHE_SERVICE_PORT: ${NOVU_REDIS_CACHE_SERVICE_PORT?NOVU_REDIS_CACHE_SERVICE_PORT not set}
+      S3_LOCAL_STACK: ${NOVU_S3_LOCAL_STACK?NOVU_S3_LOCAL_STACK not set}
+      S3_BUCKET_NAME: ${NOVU_S3_BUCKET_NAME?NOVU_S3_BUCKET_NAME not set}
+      S3_REGION: ${NOVU_S3_REGION?NOVU_S3_REGION not set}
+      AWS_ACCESS_KEY_ID: ${NOVU_AWS_ACCESS_KEY_ID?NOVU_AWS_ACCESS_KEY_ID not set}
+      AWS_SECRET_ACCESS_KEY: ${NOVU_AWS_SECRET_ACCESS_KEY?NOVU_AWS_SECRET_ACCESS_KEY not set}      
+      SENTRY_DSN: ${NOVU_SENTRY_DSN?NOVU_SENTRY_DSN not set}
+      # NEW_RELIC_APP_NAME: ${NOVU_NEW_RELIC_APP_NAME?NOVU_NEW_RELIC_APP_NAME not set}
+      # NEW_RELIC_LICENSE_KEY: ${NOVU_NEW_RELIC_LICENSE_KEY?NOVU_NEW_RELIC_LICENSE_KEY not set}
+    networks:
+      - novu
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+  novu-redis:
+    image: 'redis:alpine'
+    restart: unless-stopped
+    networks:
+      - novu
+    logging:
+      driver: 'none'
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+  novu-db:
+    image: mongo
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - novu-mongodb:/data/db
+    networks:
+      - novu
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+
+volumes:  
+  novu-mongodb:
+
+networks:
+  novu:
+    name: ${TENANT_NAME?Tenanat network name not set}_novu
+  tenant:
+    name: ${TENANT_NAME?Tenanat network name not set}_tenant
+    external: true
+  edge:
+    name: ${EDGE_NETWORK_NAME?EDGE_NETWORK_NAME not set}
+    external: true

@@ -1,0 +1,249 @@
+# https://defectdojo.github.io/django-DefectDojo/integrations/social-authentication/#keycloak
+version: "3.8"
+services:
+  defectdojo-db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${DEFECTDOJO_DB_NAME?DEFECTDOJO_DB_NAME not set}
+      POSTGRES_USER: ${DEFECTDOJO_DB_USER?DEFECTDOJO_DB_USER not set}
+      POSTGRES_PASSWORD: ${DEFECTDOJO_DB_PASSWORD?DEFECTDOJO_DB_PASSWORD not set}
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+    networks:
+      - defectdojo
+    volumes:
+      - defectdojo-db:/var/lib/postgresql/data
+    deploy:
+      replicas: 1      
+      restart_policy:
+        condition: on-failure
+  defectdojo-redis:
+    image: redis:7.0.7-alpine
+    environment:      
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+    networks:
+      - defectdojo
+    volumes:
+      - defectdojo-redis:/data
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+  defectdojo-initializer:
+    image: ${DEFECTDOJO_IMAGE_DJANGO:-defectdojo/defectdojo-django:latest}
+    depends_on:
+      - defectdojo-db
+      - defectdojo-redis
+    entrypoint:
+      - /wait-for-it.sh
+      - defectdojo-db:5432
+      - --
+      - /entrypoint-initializer.sh
+    environment:
+      DD_ADMIN_USER: ${DEFECTDOJO_ADMIN_USER?DEFECTDOJO_ADMIN_USER not set}
+      DD_ADMIN_PASSWORD: ${DEFECTDOJO_ADMIN_PASSWORD?DEFECTDOJO_ADMIN_PASSWORD not set}
+      DD_ADMIN_MAIL: ${DEFECTDOJO_ADMIN_MAIL?DEFECTDOJO_ADMIN_MAIL not set}
+      DD_ADMIN_FIRST_NAME: ${DEFECTDOJO_ADMIN_FIRST_NAME?DEFECTDOJO_ADMIN_FIRST_NAME not set}
+      DD_ADMIN_LAST_NAME: ${DEFECTDOJO_ADMIN_LAST_NAME?DEFECTDOJO_ADMIN_LAST_NAME not set}
+      DD_INITIALIZE: "True"
+      DD_CREATE_CLOUD_BANNER: "False"
+      DD_CREDENTIAL_AES_256_KEY: '${DEFECTDOJO_CREDENTIAL_AES_256_KEY?DEFECTDOJO_CREDENTIAL_AES_256_KEY not set}'
+      DD_DATABASE_URL: postgresql://${DEFECTDOJO_DB_USER}:${DEFECTDOJO_DB_PASSWORD}@defectdojo-db:5432/${DEFECTDOJO_DB_NAME}
+      DD_SECRET_KEY: '${DEFECTDOJO_SECRET_KEY?DEFECTDOJO_SECRET_KEY not set}'
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+    networks:
+      - defectdojo
+    deploy:
+      replicas: 1 
+      placement:
+        constraints:
+          - node.role == manager     
+      restart_policy:
+        condition: none
+  defectdojo-celerybeat:
+    image: ${DEFECTDOJO_IMAGE_DJANGO:-defectdojo/defectdojo-django:latest}
+    depends_on:
+      - defectdojo-db
+      - defectdojo-redis
+    entrypoint:
+      - /wait-for-it.sh
+      - defectdojo-db:5432
+      - -t
+      - "30"
+      - --
+      - /entrypoint-celery-beat.sh
+    environment:
+      DD_DATABASE_URL: postgresql://${DEFECTDOJO_DB_USER}:${DEFECTDOJO_DB_PASSWORD}@defectdojo-db:5432/${DEFECTDOJO_DB_NAME}
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379
+      # DD_CELERY_BROKER_PASSWORD: guest
+      # DD_CELERY_BROKER_USER: guest
+      DD_CREDENTIAL_AES_256_KEY: '${DEFECTDOJO_CREDENTIAL_AES_256_KEY?DEFECTDOJO_CREDENTIAL_AES_256_KEY not set}'      
+      DD_SECRET_KEY: '${DEFECTDOJO_SECRET_KEY?DEFECTDOJO_SECRET_KEY not set}'
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_TIME_ZONE: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_CELERY_WORKER_POOL_TYPE: ${DEFECTDOJO_CELERY_WORKER_POOL_TYPE:-prefork}
+      DD_CELERY_WORKER_AUTOSCALE_MIN: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MIN:-2}
+      DD_CELERY_WORKER_AUTOSCALE_MAX: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MAX:-8}
+      DD_CELERY_WORKER_CONCURRENCY: ${DEFECTDOJO_CELERY_WORKER_CONCURRENCY:-4}
+      DD_CELERY_WORKER_PREFETCH_MULTIPLIER: ${DEFECTDOJO_CELERY_WORKER_PREFETCH_MULTIPLIER:-128}
+      DD_ASYNC_FINDING_IMPORT: ${DEFECTDOJO_ASYNC_FINDING_IMPORT:-False}
+      DD_ASYNC_FINDING_IMPORT_CHUNK_SIZE: ${DEFECTDOJO_ASYNC_FINDING_IMPORT_CHUNK_SIZE:-100}
+    networks:
+      - defectdojo
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+  defectdojo-celeryworker:
+    image: ${DEFECTDOJO_IMAGE_DJANGO:-defectdojo/defectdojo-django:latest}
+    depends_on:
+      - defectdojo-db
+      - defectdojo-redis
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-db:5432
+    - -t
+    - "30"
+    - --
+    - /entrypoint-celery-worker.sh
+    environment:
+      DD_DATABASE_URL: postgresql://${DEFECTDOJO_DB_USER}:${DEFECTDOJO_DB_PASSWORD}@defectdojo-db:5432/${DEFECTDOJO_DB_NAME}
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379
+      DD_CREDENTIAL_AES_256_KEY: '${DEFECTDOJO_CREDENTIAL_AES_256_KEY?DEFECTDOJO_CREDENTIAL_AES_256_KEY not set}'      
+      DD_SECRET_KEY: '${DEFECTDOJO_SECRET_KEY?DEFECTDOJO_SECRET_KEY not set}'
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_TIME_ZONE: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_CELERY_WORKER_POOL_TYPE: ${DEFECTDOJO_CELERY_WORKER_POOL_TYPE:-prefork}
+      DD_CELERY_WORKER_AUTOSCALE_MIN: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MIN:-2}
+      DD_CELERY_WORKER_AUTOSCALE_MAX: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MAX:-8}
+      DD_CELERY_WORKER_CONCURRENCY: ${DEFECTDOJO_CELERY_WORKER_CONCURRENCY:-4}
+      DD_CELERY_WORKER_PREFETCH_MULTIPLIER: ${DEFECTDOJO_CELERY_WORKER_PREFETCH_MULTIPLIER:-128}
+      DD_ASYNC_FINDING_IMPORT: ${DEFECTDOJO_ASYNC_FINDING_IMPORT:-False}
+      DD_ASYNC_FINDING_IMPORT_CHUNK_SIZE: ${DEFECTDOJO_ASYNC_FINDING_IMPORT_CHUNK_SIZE:-100}
+    networks:
+      - defectdojo
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure      
+  defectdojo-uwsgi:
+    image: ${DEFECTDOJO_IMAGE_DJANGO:-defectdojo/defectdojo-django:latest}
+    depends_on:
+      - defectdojo-db
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-db:5432
+    - -t
+    - "30"
+    - --
+    - /entrypoint-uwsgi.sh
+    environment:
+      DD_DEBUG: 'False'
+      DD_DJANGO_METRICS_ENABLED: "False"
+      # DD_TEAM_NAME: ${TENANT_NAME?TENANT_NAME not set}
+      # DD_ADMINS: ${DEFECTDOJO_ADMIN_MAIL?DEFECTDOJO_ADMIN_MAIL not set}
+      DD_DATABASE_URL: postgresql://${DEFECTDOJO_DB_USER}:${DEFECTDOJO_DB_PASSWORD}@defectdojo-db:5432/${DEFECTDOJO_DB_NAME}
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379
+      DD_EMAIL_URL: ${DEFECTDOJO_EMAIL_URL?DEFECTDOJO_EMAIL_URL not set}
+      # DD_CELERY_BROKER_PASSWORD: guest
+      # DD_CELERY_BROKER_USER: guest
+      DD_SITE_URL: ${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}/${DEFECTDOJO_PROXY_PATH:-}
+      # DD_URL_PREFIX: ${DEFECTDOJO_PROXY_PATH:-/}
+      # DD_LOGIN_URL: ${DEFECTDOJO_PROXY_PATH:-}/login
+      # DD_LOGIN_REDIRECT_URL: ${DEFECTDOJO_PROXY_PATH:-}/dashboard
+      # DD_MEDIA_URL: ${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}/${DEFECTDOJO_PROXY_PATH:-}/media/
+      # DD_STATIC_URL: ${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}/${DEFECTDOJO_PROXY_PATH:-}/static/
+      DD_SECURE_HSTS_INCLUDE_SUBDOMAINS: 'True'
+      DD_ALLOWED_HOSTS: ${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}
+      DD_SESSION_COOKIE_HTTPONLY: 'True'
+      DD_CSRF_COOKIE_SECURE: 'True'
+      DD_CSRF_COOKIE_HTTPONLY: 'True'
+      DD_CSRF_TRUSTED_ORIGINS: https://${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}
+      DD_SECURE_SSL_REDIRECT: 'False'
+      DD_SECURE_CONTENT_TYPE_NOSNIFF: 'True'
+      DD_LANGUAGE_CODE: 'en-us'
+      DD_CREDENTIAL_AES_256_KEY: '${DEFECTDOJO_CREDENTIAL_AES_256_KEY?DEFECTDOJO_CREDENTIAL_AES_256_KEY not set}'      
+      DD_SECRET_KEY: '${DEFECTDOJO_SECRET_KEY?DEFECTDOJO_SECRET_KEY not set}'
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_TIME_ZONE: ${DEFECTDOJO_TIMEZONE:-UTC}
+      DD_USE_TZ: 'True'
+      DD_CELERY_WORKER_POOL_TYPE: ${DEFECTDOJO_CELERY_WORKER_POOL_TYPE:-prefork}
+      DD_CELERY_WORKER_AUTOSCALE_MIN: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MIN:-2}
+      DD_CELERY_WORKER_AUTOSCALE_MAX: ${DEFECTDOJO_CELERY_WORKER_AUTOSCALE_MAX:-8}
+      DD_CELERY_WORKER_CONCURRENCY: ${DEFECTDOJO_CELERY_WORKER_CONCURRENCY:-4}
+      DD_CELERY_WORKER_PREFETCH_MULTIPLIER: ${DEFECTDOJO_CELERY_WORKER_PREFETCH_MULTIPLIER:-128}
+      DD_ASYNC_FINDING_IMPORT: ${DEFECTDOJO_ASYNC_FINDING_IMPORT:-False}
+      DD_ASYNC_FINDING_IMPORT_CHUNK_SIZE: ${DEFECTDOJO_ASYNC_FINDING_IMPORT_CHUNK_SIZE:-100}
+      DD_SOCIAL_AUTH_KEYCLOAK_OAUTH2_ENABLED: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_OAUTH2_ENABLED:-False}
+      DD_SOCIAL_AUTH_KEYCLOAK_KEY: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_KEY:-}
+      DD_SOCIAL_AUTH_KEYCLOAK_SECRET: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_SECRET:-}
+      DD_SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY:-}
+      DD_SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL:-}
+      DD_SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL:-}
+      DD_SOCIAL_AUTH_KEYCLOAK_LOGIN_BUTTON_TEXT: ${DEFECTDOJO_SOCIAL_AUTH_KEYCLOAK_LOGIN_BUTTON_TEXT:-}
+      DD_DISABLE_FINDING_MERGE: "False"
+      DD_SLA_NOTIFY_ACTIVE: "False"
+      DD_SLA_NOTIFY_ACTIVE_VERIFIED_ONLY: "False"
+      DD_DELETE_PREVIEW: "False"
+    networks:
+      - defectdojo
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+  defectdojo-nginx:
+    image: ${DEFECTDOJO_IMAGE_NGINX:-defectdojo/defectdojo-nginx:latest}
+    depends_on:
+      - defectdojo-uwsgi
+    environment:
+      DD_UWSGI_HOST: defectdojo-uwsgi
+      DD_SITE_URL: ${DEFECTDOJO_SITE_URL?DEFECTDOJO_SITE_URL not set}
+      GENERATE_TLS_CERTIFICATE: "false"
+      NGINX_METRICS_ENABLED: "false"
+      TZ: ${DEFECTDOJO_TIMEZONE:-UTC}
+      USE_TLS: "false"
+    networks:
+      - defectdojo
+      - tenant
+      - edge
+    # ports:
+    #   - 8000:8080
+    #   - 8443:8443
+    restart: always
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+        # - "traefik.http.middlewares.dojo-strip.stripprefix.prefixes=${DEFECTDOJO_PROXY_PATH:-/}"
+        # - "traefik.http.routers.dojo.middlewares=dojo-strip"
+        - "traefik.http.routers.dojo.rule=Host(`${DEFECTDOJO_PROXY_HOST?DEFECTDOJO_PROXY_HOST not set}`)" # && PathPrefix(`/${DEFECTDOJO_PROXY_PATH:-}{regex:$$|/.*}`)
+        - "traefik.http.routers.dojo.entrypoints=websecure"
+        - "traefik.http.services.dojo.loadbalancer.server.port=8080"
+        - "traefik.http.routers.dojo.tls=true"
+        - "traefik.http.routers.dojo.tls.certresolver=letsencrypt"    
+        # - "traefik.http.middlewares.dojo.headers.SSLRedirect=true"
+        # - "traefik.http.middlewares.dojo.headers.STSSeconds=315360000"
+        # - "traefik.http.middlewares.dojo.headers.browserXSSFilter=true"
+        # - "traefik.http.middlewares.dojo.headers.contentTypeNosniff=true"
+        # - "traefik.http.middlewares.dojo.headers.forceSTSHeader=true"
+        # - "traefik.http.middlewares.dojo.headers.SSLHost=${DEFECTDOJO_PROXY_HOST}"
+        # - "traefik.http.middlewares.dojo.headers.STSIncludeSubdomains=true"
+        # - "traefik.http.middlewares.dojo.headers.STSPreload=true"
+    
+
+networks:
+  defectdojo:
+    name: ${SERVICE_NETWORK_NAME?SERVICE_NETWORK_NAME not set}
+  tenant:
+    name: ${TENANT_NETWORK_NAME?Tenanat name not set}
+    external: true
+  edge:
+    name: ${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}
+    external: true
+volumes:
+  defectdojo-db:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-db
+  defectdojo-redis:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-redis

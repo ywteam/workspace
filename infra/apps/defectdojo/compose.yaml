@@ -1,0 +1,357 @@
+version: '3.7'
+services:
+  defectdojo-celerybeat:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-celerybeat
+    depends_on:
+      defectdojo-postgres:
+        condition: service_started
+      defectdojo-redis:
+        condition: service_started
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-postgres:5432
+    - -t
+    - "30"
+    - --
+    - /entrypoint-celery-beat.sh
+    environment:
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379/0
+      DD_CREDENTIAL_AES_256_KEY: '&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw'
+      DD_DATABASE_URL: postgresql://defectdojo:defectdojo@defectdojo-postgres:5432/defectdojo
+      DD_SECRET_KEY: hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq
+      INFISICAL_TOKEN: ""
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+    image: defectdojo/defectdojo-django:latest
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/defectdojo/config
+      target: /app/docker/extra_settings
+      bind:
+        create_host_path: true
+  defectdojo-celeryworker:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-celeryworker
+    depends_on:
+      defectdojo-postgres:
+        condition: service_started
+      defectdojo-redis:
+        condition: service_started
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-postgres:5432
+    - -t
+    - "30"
+    - --
+    - /entrypoint-celery-worker.sh
+    environment:
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379
+      DD_CREDENTIAL_AES_256_KEY: '&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw'
+      DD_DATABASE_URL: postgresql://defectdojo:defectdojo@defectdojo-postgres:5432/defectdojo
+      DD_SECRET_KEY: hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq
+      INFISICAL_TOKEN: ""
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+    image: defectdojo/defectdojo-django:latest
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/defectdojo/config
+      target: /app/docker/extra_settings
+      bind:
+        create_host_path: true
+  defectdojo-initializer:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-initializer
+    depends_on:
+      defectdojo-postgres:
+        condition: service_started
+      defectdojo-redis:
+        condition: service_started
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-postgres:5432
+    - --
+    - /entrypoint-initializer.sh
+    environment:
+      DD_ADMIN_FIRST_NAME: Admin
+      DD_ADMIN_LAST_NAME: User
+      DD_ADMIN_MAIL: admin@defectdojo.local
+      DD_ADMIN_USER: admin
+      DD_CREDENTIAL_AES_256_KEY: '&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw'
+      DD_DATABASE_URL: postgresql://defectdojo:defectdojo@defectdojo-postgres:5432/defectdojo
+      DD_INITIALIZE: "true"
+      DD_SECRET_KEY: hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq
+      INFISICAL_TOKEN: ""
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+    image: defectdojo/defectdojo-django:latest
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/defectdojo/config
+      target: /app/docker/extra_settings
+      bind:
+        create_host_path: true
+  defectdojo-postgres:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-postgres
+    environment:
+      POSTGRES_DB: defectdojo
+      POSTGRES_USER: defectdojo
+      POSTGRES_PASSWORD: defectdojo
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+    image: postgres:latest
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+      - type: bind
+        source: /dados/defectdojo/postgres
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: true
+  # defectdojo-mysql:
+  #   profiles:
+  #   - rapd-deploy
+  #   - vulnerability/management
+  #   - defectdojo
+  #   command:
+  #   - mysqld
+  #   - --character-set-server=utf8mb4
+  #   - --collation-server=utf8mb4_unicode_ci
+  #   container_name: defectdojo-mysql
+  #   environment:
+  #     INFISICAL_TOKEN: ""
+  #     MYSQL_DATABASE: defectdojo
+  #     MYSQL_PASSWORD: defectdojo
+  #     MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+  #     MYSQL_USER: defectdojo
+  #     RAPD_VERSION: 0.0.1
+  #     TZ: UTC
+  #   image: mysql:5.7.40
+  #   labels:
+  #     com.centurylinklabs.watchtower.enable: "true"
+  #     com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+  #     com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+  #     com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+  #     com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+  #     com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+  #     com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+  #     rapd.deploy.svc.kind: vulnerability/management
+  #     rapd.deploy.svc.kind.name: defectdojo
+  #     version: 0.0.1
+  #   networks:
+  #     rapd: null
+  #   stdin_open: true
+  #   tty: true
+  #   volumes:
+  #   - type: bind
+  #     source: /mnt/dados/defectdojo/mysql
+  #     target: /var/lib/mysql
+  #     bind:
+  #       create_host_path: true
+  defectdojo-nginx:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-nginx
+    depends_on:
+      defectdojo-uwsgi:
+        condition: service_started
+    environment:
+      DD_UWSGI_HOST: defectdojo-uwsgi
+      GENERATE_TLS_CERTIFICATE: "true"
+      INFISICAL_TOKEN: ""
+      NGINX_METRICS_ENABLED: "false"
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+      USE_TLS: "true"
+    image: defectdojo/defectdojo-nginx:latest
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    ports:
+    - mode: ingress
+      target: 8080
+      published: "8080"
+      protocol: tcp
+    - mode: host
+      target: 8443
+      published: "8443"
+      protocol: tcp
+    restart: always
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/defectdojo/media
+      target: /usr/share/nginx/html/media
+      bind:
+        create_host_path: true
+  defectdojo-redis:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-redis
+    environment:
+      INFISICAL_TOKEN: ""
+      RAPD_VERSION: 0.0.1
+      SVC_PATH: /dados/rapd.run/rapd.deploy/services/defectdojo
+      TZ: UTC
+    image: redis:7.0.7-alpine
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/defectdojo/redis
+      target: /data
+      bind:
+        create_host_path: true
+  defectdojo-uwsgi:
+    profiles:
+    - rapd-deploy
+    - vulnerability/management
+    - defectdojo
+    container_name: defectdojo-uwsgi
+    depends_on:
+      defectdojo-postgres:
+        condition: service_started
+    entrypoint:
+    - /wait-for-it.sh
+    - defectdojo-postgres:5432
+    - -t
+    - "30"
+    - --
+    - /entrypoint-uwsgi.sh
+    environment:
+      DD_ALLOWED_HOSTS: '*'
+      #DD_SECURE_SSL_REDIRECT: False
+      DD_CELERY_BROKER_PASSWORD: guest
+      DD_CELERY_BROKER_URL: redis://defectdojo-redis:6379/0
+      DD_CELERY_BROKER_USER: guest
+      DD_CREDENTIAL_AES_256_KEY: '&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw'
+      DD_CSRF_COOKIE_SECURE: false
+      DD_CSRF_COOKIE_HTTPONLY: false
+      DD_DATABASE_URL: postgresql://defectdojo:defectdojo@defectdojo-postgres:5432/defectdojo
+      DD_DEBUG: True
+      DD_DJANGO_METRICS_ENABLED: "False"
+      DD_SECRET_KEY: hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq
+      #DD_SESSION_COOKIE_SECURE: False
+      INFISICAL_TOKEN: ""
+      RAPD_VERSION: 0.0.1
+      TZ: UTC
+    image: defectdojo/defectdojo-django:latest
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+      com.centurylinklabs.watchtower.lifecycle.post-check: /rapd/send-heartbeat.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update: /rapd/restore-data.sh
+      com.centurylinklabs.watchtower.lifecycle.post-update-timeout: "0"
+      com.centurylinklabs.watchtower.lifecycle.pre-check: /rapd/sync.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update: /rapd/dump-data.sh
+      com.centurylinklabs.watchtower.lifecycle.pre-update-timeout: "0"
+      rapd.deploy.svc.kind: vulnerability/management
+      rapd.deploy.svc.kind.name: defectdojo
+      version: 0.0.1
+    networks:
+      rapd: null
+    stdin_open: true
+    tty: true
+    volumes:
+    - type: bind
+      source: /dados/rapd.run/rapd.deploy/services/defectdojo/config
+      target: /app/docker/extra_settings
+      bind:
+        create_host_path: true
+    - type: bind
+      source: /dados/rapd.run/rapd.deploy/services/defectdojo/.data/media
+      target: /usr/share/nginx/html/media
+      bind:
+        create_host_path: true
+networks:
+  rapd:
+    name: rapd-network
+    driver: bridge

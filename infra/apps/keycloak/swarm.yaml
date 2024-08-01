@@ -1,0 +1,218 @@
+# https://www.keycloak.org/server/containers
+# https://www.keycloak.org/server/configuration-production
+# https://www.keycloak.org/server/enabletls
+# https://www.keycloak.org/server/hostname
+
+
+# --https-key-store-file=/etc/x509/https/keycloak-server.keystore.p12 \
+#  --https-key-store-password=${KEYCLOAK_KEYSTORE_PASSWORD?KEYCLOAK_KEYSTORE_PASSWORD not set} \
+#  --https-trust-store-file=/etc/x509/https/keycloak-server.truststore.p12 \
+#  --https-trust-store-password=${KEYCLOAK_TRUSTSTORE_PASSWORD?KEYCLOAK_TRUSTSTORE_PASSWORD not set} \
+
+version: "3.8"
+services:
+  keycloak-db:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME?KEYCLOAK_DB_NAME not set}
+      POSTGRES_USER: ${KEYCLOAK_DB_USER?KEYCLOAK_DB_USER not set}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD?KEYCLOAK_DB_PASSWORD not set}
+      TZ: ${KEYCLOAK_TIMEZONE:-UTC}
+    volumes:
+      - keycloak-db:/var/lib/postgresql/data
+    networks:
+      - keycloak
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+  
+  keycloak-dev:
+    image: quay.io/keycloak/keycloak:latest
+    command: | 
+        start-dev -Djgroups.dns.query=keycloak        
+    environment:
+      KC_CACHE: ispn
+      KC_CACHE_STACK: kubernetes
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_PROXY: edge
+      KC_HOSTNAME_STRICT: "false"
+      KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_SUCCESS_LEVEL: info
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER?KEYCLOAK_ADMIN_USER not set}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD?KEYCLOAK_ADMIN_PASSWORD not set}
+    networks:
+      - keycloak
+      - tenant
+      - edge
+    # volumes:
+    #   - keycloak-certs:/certs
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=edge"
+        - "traefik.http.routers.keycloak.entrypoints=websecure"
+        - "traefik.http.routers.keycloak.rule=Host(`${KEYCLOAK_PROXY_HOST?KEYCLOAK_PROXY_HOST not set}`)"
+        - "traefik.http.routers.keycloak.service=keycloak"
+        - "traefik.http.services.keycloak.loadbalancer.server.port=8080"
+        - "traefik.http.routers.keycloak.tls=true"
+        - "traefik.http.routers.keycloak.tls.certresolver=letsencrypt"
+  
+  # keycloak-frontend:
+  #   image: quay.io/keycloak/keycloak:latest
+  #   entrypoint: 
+  #     - /bin/bash
+  #     - -c
+  #     - |
+  #       ls -lsa /certs/
+  #       # if [ ! -r /certs/keycloak-server.crt.pem ]; then
+  #       #   echo "keycloak-server.crt.pem is not readable"
+  #       #   exit 1
+  #       # fi        
+  #       # if [ ! -r /certs/keycloak-server.key.pem ]; then
+  #       #   echo "keycloak-server.key.pem is not readable"
+  #       #   exit 1
+  #       # fi
+
+  #       /opt/keycloak/bin/kc.sh --verbose start \
+  #         --hostname-url=${KEYCLOAK_FRONTEND_HOST?KEYCLOAK_FRONTEND_HOST not set} \
+  #         --https-port=8443 \
+  #         --https-protocols=TLSv1.3,TLSv1.2 \
+  #         --https-client-auth=none \
+  #         --https-certificate-file=/certs/keycloak-server.crt.pem \
+  #         --https-certificate-key-file=/certs/keycloak-server.key.pem \
+  #         -Djgroups.dns.query=keycloak
+  #   environment:
+  #     KC_CACHE: ispn
+  #     KC_CACHE_STACK: kubernetes
+  #     KC_DB: postgres
+  #     KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+  #     KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+  #     KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+  #     KC_PROXY: edge
+  #     KC_HOSTNAME_STRICT: "false"
+  #     KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_SUCCESS_LEVEL: info
+  #     KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER?KEYCLOAK_ADMIN_USER not set}
+  #     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD?KEYCLOAK_ADMIN_PASSWORD not set}
+  #     KC_HTTP_RELAITVE_PATH: "/"
+  #   volumes:
+  #     - keycloak-certs:/certs
+  #   networks:
+  #     - keycloak
+  #     - tenant
+  #     - edge
+  #   deploy:
+  #     replicas: 1
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     restart_policy:
+  #       condition: none 
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.docker.network=edge"
+  #       - "traefik.http.routers.keycloak-ui.entrypoints=https"
+  #       - "traefik.http.routers.keycloak-ui.rule=Host(`${KEYCLOAK_PROXY_HOST?KEYCLOAK_PROXY_HOST not set}`)"
+  #       - "traefik.http.routers.keycloak-ui.service=keycloak-ui"
+  #       - "traefik.http.services.keycloak-ui.loadbalancer.server.port=8443"
+  # keycloak-backend:
+  #   image: quay.io/keycloak/keycloak:latest
+  #   command: | 
+  #     start \
+  #       --hostname-url=${KEYCLOAK_BACKEND_HOST?KEYCLOAK_BACKEND_HOST not set} \
+  #       --https-port=8443 \
+  #       --hostname-strict-backchannel=true \
+  #       --https-protocols=TLSv1.3,TLSv1.2 \
+  #       --https-client-auth=none \
+  #       --https-certificate-file=/certs/keycloak-server.crt.pem \
+  #       --https-certificate-key-file=/certs/keycloak-server.key.pem \
+  #       -Djgroups.dns.query=keycloak
+  #   environment:
+  #     KC_CACHE: ispn
+  #     KC_CACHE_STACK: kubernetes
+  #     KC_DB: postgres
+  #     KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+  #     KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+  #     KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+  #     KC_PROXY: edge
+  #     KC_HOSTNAME_STRICT: "false"
+  #     KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_SUCCESS_LEVEL: info
+  #     KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER?KEYCLOAK_ADMIN_USER not set}
+  #     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD?KEYCLOAK_ADMIN_PASSWORD not set}
+  #   networks:
+  #     - keycloak
+  #     - tenant
+  #     - edge
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: none
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.http.routers.keycloak-api.entrypoints=https"
+  #       - "traefik.http.routers.keycloak-api.rule=Host(`${KEYCLOAK_PROXY_HOST?KEYCLOAK_PROXY_HOST not set}`) && PathPrefix(`/auth`)"
+  #       - "traefik.http.routers.keycloak-api.service=keycloak-api"
+  #       - "traefik.http.services.keycloak-api.loadbalancer.server.port=8443"
+  # keycloak-console:
+  #   image: quay.io/keycloak/keycloak:latest
+  #   command: | 
+  #     start \
+  #       --hostname-admin-url=${KEYCLOAK_CONSOLE_HOST?KEYCLOAK_CONSOLE_HOST not set} \
+  #       --https-port=8443 \
+  #       --https-protocols=TLSv1.3,TLSv1.2 \
+  #       --https-client-auth=none \
+  #       --https-certificate-file=/certs/keycloak-server.crt.pem \
+  #       --https-certificate-key-file=/certs/keycloak-server.key.pem \
+  #       -Djgroups.dns.query=keycloak
+  #   environment:
+  #     KC_CACHE: ispn
+  #     KC_CACHE_STACK: kubernetes
+  #     KC_DB: postgres
+  #     KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KEYCLOAK_DB_NAME}
+  #     KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+  #     KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+  #     KC_PROXY: edge
+  #     KC_HOSTNAME_STRICT: "false"
+  #     KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_SUCCESS_LEVEL: info
+  #     KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER?KEYCLOAK_ADMIN_USER not set}
+  #     KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD?KEYCLOAK_ADMIN_PASSWORD not set}
+  #   networks:
+  #     - keycloak
+  #     - tenant
+  #     - edge
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: none
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.http.routers.keycloak-console.entrypoints=https"
+  #       - "traefik.http.routers.keycloak-console.rule=Host(`${KEYCLOAK_PROXY_HOST?KEYCLOAK_PROXY_HOST not set}`) && PathPrefix(`/console`)"
+  #       - "traefik.http.routers.keycloak-console.service=keycloak-console"
+  #       - "traefik.http.services.keycloak-console.loadbalancer.server.port=8443"
+
+volumes:
+  keycloak-db:
+    name: ${TENANT_NAME?Tenanat name not set}-keycloak-db
+  # keycloak-certs:
+  #   name: ${TENANT_NAME?Tenanat name not set}-keycloak-certs
+  #   driver_opts: 
+  #     type: local
+  #     device: ${KEYCLOAK_STACK_CERTS_PATH?KEYCLOAK_STACK_CERTS_PATH not set}
+  #     o: bind
+    
+
+networks:
+  keycloak:
+    name: ${TENANT_NAME?Tenanat name not set}-keycloak
+  tenant:
+    name: ${TENANT_NAME?Tenanat name not set}-tenant
+    external: true
+  edge:
+    name: ${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}
+    external: true
