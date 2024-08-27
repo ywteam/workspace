@@ -16,3 +16,6 @@
 [submodule "infra/iac"]
 	path = infra/iac
 	url = https://github.com/ywteam/infra.iac
+[submodule "projects/ydk"]
+	path = projects/ydk
+	url = https://github.com/ywteam/ydk
