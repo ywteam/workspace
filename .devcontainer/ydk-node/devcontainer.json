@@ -26,7 +26,10 @@
 				"nrwl.angular-console",
 				"angular.ng-template",
 				"postman.postman-for-vscode",
-				"github.vscode-github-actions"
+				"github.vscode-github-actions",
+				"firsttris.vscode-jest-runner",
+				"Orta.vscode-jest",
+				"bradlc.vscode-tailwindcss"
 			]
 		}        
 	}
