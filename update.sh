@@ -37,3 +37,13 @@ git:submodules:remove-all() {
 
 # debug:config
 # git:submodules:remove-all
+if [ -d "./.git/modules/projects/ydk" ]; then
+    rm -rf ./.git/modules/projects/ydk
+fi
+if [ -d "./projects/ydk" ]; then
+    rm -rf ./projects/ydk
+fi
+
+# Reinitialize the submodule
+git submodule update --init --recursive --force
+git submodule add https://github.com/ywteam/ydk ./projects/ydk
