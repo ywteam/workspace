@@ -1,0 +1,15 @@
+services:
+  ywt-ydk-node:
+    container_name: ywt-ydk-node
+    image: mcr.microsoft.com/devcontainers/typescript-node:dev-18-bookworm
+    command: sleep infinity
+    network_mode: host
+    # networks:
+    #   - ywteam
+    #   - ywteam-dev
+    #   - ywteam-ydk
+    environment:
+      - HOST_USER_ID=${UID:-1000}
+      - HOST_GROUP_ID=${GID:-1000}
+    volumes:
+      - ../..:/workspace:cached

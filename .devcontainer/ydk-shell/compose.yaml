@@ -1,0 +1,23 @@
+services:
+  ywt-ydk-shell:
+    container_name: ywt-ydk-shell
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    networks:
+      - ywteam
+      - ywteam-dev
+      - ywteam-ydk
+    build: 
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        - USER_ID=${UID:-1000}
+        - GROUP_ID=${GID:-1000}
+    environment:
+      - HOST_USER_ID=${UID:-1000}
+      - HOST_GROUP_ID=${GID:-1000}
+    volumes:
+      - ../..:/workspace:cached
+      # - ../../src/shell:/workspace/src:cached
+      # - ../../../../.git:/workspace/.git:cached
+      # - ../../../../.gitignore:/workspace/.gitignore:cached
+      # - ../../../../.gitmodules:/workspace/.gitmodules:cached

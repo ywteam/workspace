@@ -1,0 +1,234 @@
+version: '3.8'
+services:
+  consul-server-1:
+    image: hashicorp/consul:1.11.2
+    volumes:
+     - consul-certs:/consul/config/certs/
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        _internal_ip=$$(hostname -i)
+        _certs_path="/consul/config/certs/"
+        echo "$$_internal_ip / $$_certs_path"        
+        # mkdir -p "$$_certs_path"
+        echo "Listing certificates" && ls -A "$$_certs_path"
+        # consul keygen
+        # echo "CONSUL_ENCRYPT_KEY => $CONSUL_ENCRYPT_KEY"
+        if [ -z "$$(ls -A "$$_certs_path")" ]; then
+          echo "Creating certificates"
+          CURRENT_DIR=$$(pwd)
+          cd "$$_certs_path"
+          consul tls ca create
+          consul tls cert create -server -dc dc1
+          consul tls cert create -client -dc dc1
+          cd "$$CURRENT_DIR"
+          # mv -f ./consul-agent-ca.pem /consul/config/certs/consul-agent-ca.pem
+          # mv -f ./dc1-server-consul-0.pem /consul/config/certs/dc1-server-consul-0.pem
+          # mv -f ./dc1-server-consul-0-key.pem /consul/config/certs/dc1-server-consul-0-key.pem
+          # mf -f ./dc1-client-consul-0-key.pem /consul/config/certs/dc1-client-consul-0-key.pem          
+        fi
+
+        # cd /consul/config/certs/
+        # [[ ! -f "server1.dc1.consul.csr" && ! -f "server1.dc1.consul.key" ]] && openssl req -new -newkey rsa:2048 -nodes -keyout server1.dc1.consul.key -out server1.dc1.consul.csr -subj '/CN=server.dc1.consul'
+        # [[ ! -f "server.dc1.consul.crt" ]] && openssl x509 -req -in server1.dc1.consul.csr -CA consul-agent-ca.pem -CAkey consul-agent-ca-key.pem -CAcreateserial -out server1.dc1.consul.crt && openssl x509 -text -noout -in server1.dc1.consul.crt
+        # [[ ! -f "consul-agent-ca.pem" ]] && consul tls ca create
+        # [[ ! -f "dc1-server-consul-0.pem" ]] && consul tls cert create -server -dc dc1
+        # [[ ! -f "dc1-server-consul-0-key.pem" ]] && consul tls cert create -client -dc dc1
+        cat <<EOF > /consul/config/server1.json
+        {
+          "node_name": "consul-server-1",
+          "server": true,
+          "ui_config": {
+            "enabled": true
+          },
+          "data_dir": "/consul/data",
+          "addresses": {
+            "http": "0.0.0.0"
+          },
+          "retry_join": ["consul-server-2", "consul-server-3"],
+          "encrypt": "${CONSUL_ENCRYPT_KEY?CONSUL_ENCRYPT_KEY not set}",
+          "verify_incoming": true,
+          "verify_outgoing": true,
+          "verify_server_hostname": true,
+          "ca_file": "/consul/config/certs/consul-agent-ca.pem",
+          "cert_file": "/consul/config/certs/dc1-server-consul-0.pem",
+          "key_file": "/consul/config/certs/dc1-server-consul-0-key.pem",
+          "bind_addr": "$$_internal_ip",
+          "advertise_addr": "$$_internal_ip"
+        }
+        EOF
+        consul agent -config-file=/consul/config/server1.json -bootstrap-expect=3
+    ports:
+      - "8500:8500"
+      - "8600:8600/tcp"
+      - "8600:8600/udp"
+    networks:
+      - consul
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: none
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+  consul-server-2:
+    image: hashicorp/consul:1.11.2
+    volumes:
+     - consul-certs:/consul/config/certs/:ro
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        _internal_ip=$$(hostname -i)
+        mkdir -p /consul/config
+        cat <<EOF > /consul/config/server2.json
+        {
+          "node_name": "consul-server-2",
+          "server": true,
+          "ui_config": {
+            "enabled": true
+          },
+          "data_dir": "/consul/data",
+          "addresses": {
+            "http": "0.0.0.0"
+          },
+          "retry_join": ["consul-server-1", "consul-server-3"],
+          "encrypt": "${CONSUL_ENCRYPT_KEY?CONSUL_ENCRYPT_KEY not set}",
+          "verify_incoming": true,
+          "verify_outgoing": true,
+          "verify_server_hostname": true,
+          "ca_file": "/consul/config/certs/consul-agent-ca.pem",
+          "cert_file": "/consul/config/certs/dc1-server-consul-0.pem",
+          "key_file": "/consul/config/certs/dc1-server-consul-0-key.pem",
+          "bind_addr": "$$_internal_ip",
+          "advertise_addr": "$$_internal_ip"
+        }
+        EOF
+        consul agent -config-file=/consul/config/server2.json -bootstrap-expect=3
+    depends_on:
+      - consul-server-1
+    networks:
+      - consul
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: none
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+  consul-server-3:
+    image: hashicorp/consul:1.11.2
+    volumes:
+     - consul-certs:/consul/config/certs/:ro
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        _internal_ip=$$(hostname -i)
+        mkdir -p /consul/config
+        cat <<EOF > /consul/config/server3.json
+        {
+          "node_name": "consul-server-3",
+          "server": true,
+          "ui_config": {
+            "enabled": true
+          },
+          "data_dir": "/consul/data",
+          "addresses": {
+            "http": "0.0.0.0"
+          },
+          "retry_join": ["consul-server-1", "consul-server-2"],
+          "encrypt": "${CONSUL_ENCRYPT_KEY?CONSUL_ENCRYPT_KEY not set}",
+          "verify_incoming": true,
+          "verify_outgoing": true,
+          "verify_server_hostname": true,
+          "ca_file": "/consul/config/certs/consul-agent-ca.pem",
+          "cert_file": "/consul/config/certs/dc1-server-consul-0.pem",
+          "key_file": "/consul/config/certs/dc1-server-consul-0-key.pem",
+          "bind_addr": "$$_internal_ip",
+          "advertise_addr": "$$_internal_ip"
+        }
+        EOF
+        consul agent -config-file=/consul/config/server3.json -bootstrap-expect=3
+    depends_on:
+      - consul-server-1
+      - consul-server-2
+    networks:
+      - consul
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: none
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+  consul-client:
+    image: hashicorp/consul:1.11.2
+    volumes:
+     - consul-certs:/consul/config/certs/:ro
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        _internal_ip=$$(hostname -i)
+        mkdir -p /consul/config
+        cat <<EOF > /consul/config/client.json
+        {
+          "node_name": "consul-client",
+          "data_dir": "/consul/data",
+          "retry_join": ["consul-server-1", "consul-server-2", "consul-server-3"],
+          "encrypt": "${CONSUL_ENCRYPT_KEY?CONSUL_ENCRYPT_KEY not set}",
+          "verify_incoming": true,
+          "verify_outgoing": true,
+          "verify_server_hostname": true,
+          "ca_file": "/consul/config/certs/consul-agent-ca.pem",
+          "cert_file": "/consul/config/certs/dc1-server-consul-0.pem",
+          "key_file": "/consul/config/certs/dc1-server-consul-0-key.pem",
+          "bind_addr": "$$_internal_ip",
+          "advertise_addr": "$$_internal_ip"
+        }
+        EOF
+        consul agent -config-file=/consul/config/client.json
+    depends_on:
+      - consul-server-1
+      - consul-server-2
+      - consul-server-3
+    networks:
+      - consul
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: none
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+volumes:
+  consul-certs: 
+ 
+networks:
+  consul:
+    name: ${TENANT_NAME?Tenanat network name not set}_consul
+  tenant:
+    name: ${TENANT_NAME?Tenanat network name not set}_tenant
+    external: true
+  edge:
+    name: ${EDGE_NETWORK_NAME?EDGE_NETWORK_NAME not set}
+    external: true

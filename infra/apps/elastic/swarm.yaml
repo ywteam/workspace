@@ -1,0 +1,468 @@
+version: '3.8'
+services:
+  es-setup:
+    image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+    user: root
+    environment:
+      ELASTIC_USERNAME: ${ELASTIC_ADMIN_USERNAME?ELASTIC_ADMIN_USERNAME not set}
+      ELASTIC_PASSWORD: ${ELASTIC_ADMIN_PASSWORD?ELASTIC_ADMIN_PASSWORD not set}
+      KIBANA_PASSWORD: ${ELASTIC_KIBANA_PASSWORD?ELASTIC_KIBANA_PASSWORD not set}
+    command: >
+      bash -c '
+        if [ x$${ELASTIC_PASSWORD} == x ]; then
+          echo "Set the ELASTIC_PASSWORD environment variable in the .env file";
+          exit 1;
+        elif [ x$${KIBANA_PASSWORD} == x ]; then
+          echo "Set the KIBANA_PASSWORD environment variable in the .env file";
+          exit 1;
+        fi;  
+        if [ ! -f config/certs/ca.zip ]; then
+          echo "Creating CA";
+          bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+          unzip config/certs/ca.zip -d config/certs;
+        fi;
+        if [ ! -f config/certs/certs.zip ]; then
+          echo "Creating certs";
+          echo -ne \
+          "instances:\n"\
+          "  - name: es01\n"\
+          "    dns:\n"\
+          "      - es01\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          "  - name: es02\n"\
+          "    dns:\n"\
+          "      - es02\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          "  - name: es03\n"\
+          "    dns:\n"\
+          "      - es03\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          > config/certs/instances.yml;
+          bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+          unzip config/certs/certs.zip -d config/certs;
+        fi;
+        echo "Setting file permissions"
+        chown -R root:root config/certs
+        find . -type d -exec chmod 750 \{\} \;;
+        find . -type f -exec chmod 640 \{\} \;;
+        echo "Created certificates"
+        ls -lsa config/certs;
+        echo "Waiting for Elasticsearch availability";        
+        until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;        
+        echo "All done!";
+      '
+    networks:
+      - elastic
+      - tenant
+      - edge    
+    volumes:
+      - elastic-certs:/usr/share/elasticsearch/config/certs
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: none
+      placement:
+        constraints:
+          - node.role == manager
+  es01:
+    image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+    hostname: es01
+    environment:
+      - node.name=es01
+      - cluster.name=${ELASTIC_CLUSTER_NAME}
+      - cluster.initial_master_nodes=es01,es02,es03
+      - discovery.seed_hosts=es02,es03
+      - ELASTIC_PASSWORD=${ELASTIC_ADMIN_PASSWORD?ELASTIC_ADMIN_PASSWORD not set}
+      - ELASTIC_USER=${ELASTIC_ADMIN_USERNAME?ELASTIC_ADMIN_USERNAME not set}
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es01/es01.key
+      - xpack.security.http.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es01/es01.key
+      - xpack.security.transport.ssl.certificate=certs/es01/es01.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${ELASTIC_LICENCE?ELASTIC_LICENCE not set}
+    volumes:
+      - elastic-certs:/usr/share/elasticsearch/config/certs
+      - elastic-1:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+      - tenant
+      - edge
+    depends_on:
+      - elastic-setup
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: ${ELASTIC_MEM_LIMIT?ELASTIC_MEM_LIMIT not set}
+          # cpus: ${ELASTIC_CPU_LIMIT?ELASTIC_CPU_LIMIT not set}          
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+        - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+        - "traefik.http.routers.elastic.entrypoints=websecure"
+        - "traefik.http.services.elastic.loadbalancer.server.port=9200"
+        - "traefik.http.routers.elastic.tls=true"
+        - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"
+  es02:  
+    image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+    hostname: es02
+    environment:
+      - node.name=es02
+      - cluster.name=${ELASTIC_CLUSTER_NAME}
+      - cluster.initial_master_nodes=es01,es02,es03
+      - discovery.seed_hosts=es01,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es02/es02.key
+      - xpack.security.http.ssl.certificate=certs/es02/es02.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es02/es02.key
+      - xpack.security.transport.ssl.certificate=certs/es02/es02.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${ELASTIC_LICENCE?ELASTIC_LICENCE not set}
+    volumes:
+      - elastic-certs:/usr/share/elasticsearch/config/certs
+      - elastic-2:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+      - tenant
+      - edge    
+    depends_on:
+      - elastic-setup
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: ${ELASTIC_MEM_LIMIT?ELASTIC_MEM_LIMIT not set}
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+        - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+        - "traefik.http.routers.elastic.entrypoints=websecure"
+        - "traefik.http.services.elastic.loadbalancer.server.port=9200"
+        - "traefik.http.routers.elastic.tls=true"
+        - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"
+  es03:
+    image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+    hostname: es03
+    environment:
+      - node.name=es03
+      - cluster.name=${ELASTIC_CLUSTER_NAME}
+      - cluster.initial_master_nodes=es01,es02,es03
+      - discovery.seed_hosts=es01,es02
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es03/es03.key
+      - xpack.security.http.ssl.certificate=certs/es03/es03.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es03/es03.key
+      - xpack.security.transport.ssl.certificate=certs/es03/es03.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.license.self_generated.type=${ELASTIC_LICENCE?ELASTIC_LICENCE not set}
+    volumes:
+      - elastic-certs:/usr/share/elasticsearch/config/certs
+      - elastic-3:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+      - tenant
+      - edge    
+    depends_on:
+      - elastic-setup
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: ${ELASTIC_MEM_LIMIT?ELASTIC_MEM_LIMIT not set}
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+        - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+        - "traefik.http.routers.elastic.entrypoints=websecure"
+        - "traefik.http.services.elastic.loadbalancer.server.port=9200"
+        - "traefik.http.routers.elastic.tls=true"
+        - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"
+
+
+volumes:
+  elastic-certs:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-certs
+  elastic-1:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-1
+  elastic-2:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-2
+  elastic-3:
+    name: ${SERVICE_VOLUME_NAME?SERVICE_VOLUME_NAME not set}-3
+networks:
+  elastic:
+    name: ${SERVICE_NETWORK_NAME?Tenanat network name not set}  
+  tenant:
+    name: ${TENANT_NETWORK_NAME?Tenanat name not set}
+    external: true
+  edge:
+    name: ${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}
+    external: true
+
+
+
+
+
+  # elastic-1:
+  #   image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+  #   environment:
+  #     # - node.name=elastic-1
+  #     # - cluster.name=elasticsearch
+  #     # - discovery.seed_hosts=elastic-1
+  #     # - cluster.initial_master_nodes=elastic-1
+  #     # - bootstrap.memory_lock=true
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=true
+  #     - xpack.security.authc.api_key.enabled=true
+  #     - "ES_JAVA_OPTS= -Xms512m -Xmx512m"
+  #     - "ELASTIC_USERNAME=${ELASTIC_ADMIN_USERNAME?ELASTIC_ADMIN_USERNAME not set}"
+  #     - "ELASTIC_PASSWORD=${ELASTIC_ADMIN_PASSWORD?ELASTIC_ADMIN_PASSWORD not set}"
+  #   command: >
+  #     bash -c '
+  #       until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:elastic" -H "Content-Type: application/json" https://elastic-1:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibana\"}" | grep -q "^{}"; do sleep 10; done;            
+  #     '
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   volumes:
+  #     - elastic-1-data:/usr/share/elasticsearch/data
+  #   ports:
+  #     - 9200:9200
+  #   networks:
+  #     - elastic
+  #     - tenant
+  #     - edge
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
+  #       max_attempts: 3
+  #       window: 120s      
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+  #       - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+  #       - "traefik.http.routers.elastic.entrypoints=websecure"
+  #       - "traefik.http.services.elastic.loadbalancer.server.port=9200"
+  #       - "traefik.http.routers.elastic.tls=true"
+  #       - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"
+  # elastic-ca: 
+  #   image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+  #   command: >
+  #     bash -c '
+  #       if [ ! -f config/certs/ca.zip ]; then
+  #         echo "Creating CA";
+  #         bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+  #         unzip config/certs/ca.zip -d config/certs;
+  #       fi;
+  #       if [ ! -f config/certs/certs.zip ]; then
+  #         echo "Creating certs";
+  #         echo -ne \
+  #         "instances:\n"\
+  #         "  - name: elastic-1\n"\
+  #         "    dns:\n"\
+  #         "      - elastic-1\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         "  - name: kibana\n"\
+  #         "    dns:\n"\
+  #         "      - kibana\n"\
+  #         "      - localhost\n"\
+  #         "    ip:\n"\
+  #         "      - 127.0.0.1\n"\
+  #         > config/certs/instances.yml;
+  #         bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+  #         unzip config/certs/certs.zip -d config/certs;
+  #       fi;    
+  #       echo "Setting file permissions"
+  #       chown -R root:root config/certs;
+  #       echo "Setting kibana password"
+  #       until curl -s -X POST --cacert config/certs/ca/ca.crt -u "elastic:elastic" -H "Content-Type: application/json" https://elastic-1:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibana\"}" | grep -q "^{}"; do sleep 10; done;            
+  #     '
+  #   volumes:
+  #     - elastic-certs:/usr/share/elasticsearch/config/certs
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+  #     interval: 1s
+  #     timeout: 5s
+  #     retries: 120
+  #   deploy:
+  #     restart_policy:
+  #       condition: none
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  # elastic-1:
+  #   image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+  #   environment:
+  #     node.name: elastic-1
+  #     discovery.seed_hosts: elastic-2
+  #     cluster.initial_master_nodes: elastic-1,elastic-2
+  #     cluster.name: elastic-${TENANT_NAME?Tenanat name not set}-cluster
+  #     bootstrap.memory_lock: "true"
+  #     xpack.security.enabled: "false"
+  #     xpack.security.authc.api_key.enabled: "true"
+  #     ELASTIC_PASSWORD: ${ELASTIC_ADMIN_PASSWORD?ELASTIC_ADMIN_PASSWORD not set}
+  #     ELASTIC_USERNAME: ${ELASTIC_ADMIN_USERNAME?ELASTIC_ADMIN_USERNAME not set}
+  #     ES_JAVA_OPTS: -Xms256m -Xmx256m
+  #   networks:
+  #     - elastic
+  #     - tenant
+  #     - edge
+  #   volumes:
+  #     - elastic-1-data:/elasticsearch/data
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
+  #       max_attempts: 3
+  #       window: 120s      
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+  #       - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+  #       - "traefik.http.routers.elastic.entrypoints=websecure"
+  #       - "traefik.http.services.elastic.loadbalancer.server.port=9200"
+  #       - "traefik.http.routers.elastic.tls=true"
+  #       - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"
+  # elastic-2:
+  #   image: ${ELASTIC_IMAGE:-docker.elastic.co/elasticsearch/elasticsearch:7.14.0}
+  #   environment:
+  #     node.name: elastic-2
+  #     discovery.seed_hosts: elastic-1
+  #     cluster.initial_master_nodes: elastic-1,elastic-2
+  #     cluster.name: elastic-${TENANT_NAME?Tenanat name not set}-cluster
+  #     bootstrap.memory_lock: "true"
+  #     xpack.security.enabled: "false"
+  #     xpack.security.authc.api_key.enabled: "true"
+  #     # ELASTIC_PASSWORD: ${ELASTIC_ADMIN_PASSWORD?ELASTIC_ADMIN_PASSWORD not set}
+  #     # ELASTIC_USERNAME: ${ELASTIC_ADMIN_USERNAME?ELASTIC_ADMIN_USERNAME not set}
+  #     ES_JAVA_OPTS: -Xms256m -Xmx256m
+  #   volumes:
+  #     - elastic-2-data:/elasticsearch/data
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   networks:
+  #     - elastic
+  #     - tenant
+  #     - edge
+  #   deploy:
+  #     replicas: 1
+  #     restart_policy:
+  #       condition: on-failure
+  #       max_attempts: 3
+  #       window: 120s      
+  #     placement:
+  #       constraints:
+  #         - node.role == manager
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.docker.network=${HOST_EDGE_NETWORK?HOST_EDGE_NETWORK not set}"
+  #       - "traefik.http.routers.elastic.rule=Host(`${ELASTIC_PROXY_HOST?ELASTIC_PROXY_HOST not set}`)"
+  #       - "traefik.http.routers.elastic.entrypoints=websecure"
+  #       - "traefik.http.services.elastic.loadbalancer.server.port=8080"
+  #       - "traefik.http.routers.elastic.tls=true"
+  #       - "traefik.http.routers.elastic.tls.certresolver=letsencrypt"

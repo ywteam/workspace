@@ -1,0 +1,29 @@
+{
+	"name": "YDK Go",
+	"dockerComposeFile": [
+		"compose.yaml",
+        "../compose.yaml",
+		"../../compose.yaml",
+        "../../compose.devcontainer.yaml"
+	],
+	"service": "ywt-ydk-go",
+	"containerUser": "root",
+	"remoteUser": "root",
+	"shutdownAction": "none",
+	"workspaceFolder": "/workspace/projects/ydk/src/go", ///${localWorkspaceFolderBasename}
+    // "workspaceMount": "source=../../..,target=/workspace",
+	// "postStartCommand": "chmod -x ./*.sh; ./handler.sh \"$PWD\"",
+	// "updateContentCommand": "chmod -x ./\"${PWD}\"*.sh; \"${PWD}\"/handler.sh",
+	"features": {		
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"golang.go",
+                "golang.go-nightly",
+                "premparihar.gotestexplorer"
+			]
+		}        
+	}
+}

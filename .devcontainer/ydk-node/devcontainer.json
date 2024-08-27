@@ -1,0 +1,36 @@
+{
+	"name": "YDK Node",
+	"dockerComposeFile": [
+		"compose.yaml",
+        "../compose.yaml",
+		"../../compose.yaml",
+        "../../compose.devcontainer.yaml"
+	],
+	"service": "ywt-ydk-node",
+	"containerUser": "root",
+	"remoteUser": "root",
+	"shutdownAction": "none",
+	"workspaceFolder": "/workspace/projects/ydk/src/node", ///${localWorkspaceFolderBasename}
+    // "workspaceMount": "source=../../..,target=/workspace",
+	// "postStartCommand": "chmod -x ./*.sh; ./handler.sh \"$PWD\"",
+	// "updateContentCommand": "chmod -x ./\"${PWD}\"*.sh; \"${PWD}\"/handler.sh",
+	"features": {
+		// "ghcr.io/devcontainers/features/node:1": {},
+		// "ghcr.io/lukewiwa/features/shellcheck:0": {},
+		// "ghcr.io/edouard-lopez/devcontainer-features/bats:0": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"nrwl.angular-console",
+				"angular.ng-template",
+				"postman.postman-for-vscode",
+				"github.vscode-github-actions",
+				"firsttris.vscode-jest-runner",
+				"Orta.vscode-jest",
+				"bradlc.vscode-tailwindcss"
+			]
+		}        
+	}
+}
