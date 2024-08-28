@@ -907,5 +907,7 @@ source ./sdk/shell/packages/ydk/ydk.cli.sh "$@" 4>&1
 
 # Find content in files, excluding some directories
 # find /develop -type d \( -path '*node_modules*' -o -path '*.git*' -o -path '*.data*' -o -path '*.angular*' -o -path '*cache*' -o -path '*.pnpm-store*' \) -prune -o -type f -exec grep -i -l "supabase" {} \;
+# find . -type d \( -path '*node_modules*' -o -path '*.git*' -o -path '*.data*' -o -path '*.angular*' -o -path '*cache*' -o -path '*.pnpm-store*' \) -prune -o -type f -exec grep -i -l "supabase" {} \;
+find . -type d \( -path '*node_modules*' \) -prune -exec rm -fr {} \;
 # Find all *.yaml or *.yml files with minio in content
-# grep -rl 'minio' --include \*.{yaml,yml} .
+# grep -rl 'logger' --include \*.{yaml,yml} .
