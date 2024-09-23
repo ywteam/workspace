@@ -19,3 +19,6 @@
 [submodule "projects/ydk"]
 	path = projects/ydk
 	url = https://github.com/ywteam/ydk
+[submodule "deployments"]
+	path = deployments
+	url = https://github.com/ywteam/deployments.git
